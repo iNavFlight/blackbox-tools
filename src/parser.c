@@ -834,6 +834,8 @@ static void parseGPSFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
 static void parseGPSHomeFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
 {
     parseFrame(log, stream, 'H', log->private->gpsHomeHistory[0], NULL, NULL, 0, raw);
+	log->sysConfig.gpsHomeLatitude = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]];
+	log->sysConfig.gpsHomeLongitude = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]];
 }
 
 static void parseSlowFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
