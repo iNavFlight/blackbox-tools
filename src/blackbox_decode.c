@@ -676,32 +676,53 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 	// Adding Dashware fields
 	if (options.dashWare) {
 		// rssi (%)
-		fprintf(file, ", %d", rssiPercent);
+		fprintf(file, ", %" PRId64, rssiPercent);
 		// Throttle (%)
-		fprintf(file, ", %d", throttlePercent);
+		fprintf(file, ", %" PRId64, throttlePercent);
 
-		gpsHomeLat = log->sysConfig.gpsHomeLatitude;
-		gpsHomeLon = log->sysConfig.gpsHomeLongitude;
-		GPS_distance_cm_bearing(gpsCurrentLat, gpsCurrentLon, gpsHomeLat, gpsHomeLon);
-
-		// Every 100ms, check for GPS ground speed and accumulate the travelled distance
-		if (lastFrameTimeTripDistance < (lastFrameTime / 100000) )
+		// Check if home point coordinates has changed by A LOT since the last iteration. It indicates a bogus frame
+		if ( (log->sysConfig.gpsHomeLatitude ) < (gpsHomeLat - 100000) || (log->sysConfig.gpsHomeLatitude) > (gpsHomeLat + 100000 ) 
+			|| (log->sysConfig.gpsHomeLongitude) < (gpsHomeLon - 100000) || (log->sysConfig.gpsHomeLongitude) > (gpsHomeLon + 100000) )
 		{
-			lastFrameTimeTripDistance = lastFrameTime / 100000;
-			cumulativeTripDistance += gpsSpdCmPerSecond / 10;
+			// New home is a lot different than the previous one, so we will keep the previous one
+		}
+		else
+		{
+			gpsHomeLat = log->sysConfig.gpsHomeLatitude;
+			gpsHomeLon = log->sysConfig.gpsHomeLongitude;
+		}
+		
+		// Check if there are valid GPS data before processing home distance, travelled distance, home direction and azimuth
+		if (gpsCurrentLat != 0 && gpsCurrentLon != 0 && gpsCurrentCourse >= 0 && gpsCurrentCourse < 360)
+		{
+			// If Home lat and Home longitude is 0, then it's probably the first valid gps record. Set it now.
+			if (gpsHomeLat == 0 && gpsHomeLon == 0) {
+				gpsHomeLat = log->sysConfig.gpsHomeLatitude;
+				gpsHomeLon = log->sysConfig.gpsHomeLongitude;
+			}
+
+			GPS_distance_cm_bearing(gpsCurrentLat, gpsCurrentLon, gpsHomeLat, gpsHomeLon);
+
+			// Every 100ms, check for GPS ground speed and accumulate the travelled distance
+			if (lastFrameTimeTripDistance <= (lastFrameTime / 100000))
+			{
+				lastFrameTimeTripDistance = lastFrameTime / 100000;
+				cumulativeTripDistance += gpsSpdCmPerSecond / 10;
+			}
+
+			mAhPerKm = currentDrawMilliamps / (gpsSpdCmPerSecond * 0.036);
 		}
 
 		// Distance (m)
-		fprintf(file, ", %d", homeDistanceMeters);
+		fprintf(file, ", %" PRId64, homeDistanceMeters);
 		// homeDirection
-		fprintf(file, ", %d", homeDirectionDegrees);
+		fprintf(file, ", %" PRId64, homeDirectionDegrees);
 		// mAhPerKm
-		mAhPerKm = currentDrawMilliamps / (gpsSpdCmPerSecond * 0.036);
-		fprintf(file, ", %d", mAhPerKm);
+		fprintf(file, ", %" PRId64, mAhPerKm);
 		// cumulativeTripDistance
-		fprintf(file, ", %d", cumulativeTripDistance / 100);
+		fprintf(file, ", %" PRId64, cumulativeTripDistance / 100);
 		// azimuth
-		fprintf(file, ", %d", azimuth);
+		fprintf(file, ", %" PRId64, azimuth);
 
 	}
 
