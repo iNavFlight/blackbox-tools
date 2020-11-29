@@ -133,7 +133,6 @@ static int64_t homeDirectionDegrees;
 static int64_t mAhPerKm;
 static int64_t cumulativeTripDistance; // In centimeters
 static int64_t lastFrameTimeTripDistance;
-static int64_t osdFltModeName;
 static int64_t azimuth;
 static int64_t gpsSpdCmPerSecond;
 static int64_t currentDrawMilliamps;
@@ -704,7 +703,7 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 			GPS_distance_cm_bearing(gpsCurrentLat, gpsCurrentLon, gpsHomeLat, gpsHomeLon);
 
 			// Every 100ms, check for GPS ground speed and accumulate the travelled distance
-			if (lastFrameTimeTripDistance <= (lastFrameTime / 100000))
+			if (lastFrameTimeTripDistance < (lastFrameTime / 100000))
 			{
 				lastFrameTimeTripDistance = lastFrameTime / 100000;
 				cumulativeTripDistance += gpsSpdCmPerSecond / 10;
