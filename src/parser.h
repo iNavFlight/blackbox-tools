@@ -132,6 +132,9 @@ typedef struct flightLogSysConfig_t {
     uint8_t vbatmincellvoltage;
     uint8_t vbatwarningcellvoltage;
 
+	int64_t gpsHomeLatitude;
+	int64_t gpsHomeLongitude;
+
     int16_t currentMeterOffset, currentMeterScale;
 
     uint16_t vbatref;

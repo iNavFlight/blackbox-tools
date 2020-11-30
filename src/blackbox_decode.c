@@ -34,6 +34,16 @@
 #include "stats.h"
 
 #define MIN_GPS_SATELLITES 5
+#define DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR    1.113195f 
+#define M_PIf       3.14159265358979323846f
+#define sinPolyCoef3 -1.666665710e-1f                                          // Double: -1.666665709650470145824129400050267289858e-1
+#define sinPolyCoef5  8.333017292e-3f                                          // Double:  8.333017291562218127986291618761571373087e-3
+#define sinPolyCoef7 -1.980661520e-4f                                          // Double: -1.980661520135080504411629636078917643846e-4
+#define sinPolyCoef9  2.600054768e-6f                                          // Double:  2.600054767890361277123254766503271638682e-6
+#define RAD    (M_PIf / 180.0f)
+#define RADIANS_TO_CENTIDEGREES(angle) (((angle) * 100.0f) / RAD)
+#define CENTIDEGREES_TO_RADIANS(angle) (((angle) / 100.0f) * RAD)
+#define sq(x) ((x)*(x))
 
 typedef struct decodeOptions_t {
     int help, raw, limits, debug, toStdout;
@@ -42,6 +52,7 @@ typedef struct decodeOptions_t {
     int simulateCurrentMeter;
     int mergeGPS;
     int datetime;
+	int dashWare;
     const char *outputPrefix;
 
     bool overrideSimCurrentMeterOffset, overrideSimCurrentMeterScale;
@@ -57,6 +68,7 @@ decodeOptions_t options = {
     .simulateCurrentMeter = false,
     .mergeGPS = 0,
     .datetime = 0,
+	.dashWare = 0,
 
     .overrideSimCurrentMeterOffset = false,
     .overrideSimCurrentMeterScale = false,
@@ -112,6 +124,25 @@ static uint32_t bufferedFrameIteration;
 static int64_t bufferedGPSFrame[FLIGHT_LOG_MAX_FIELDS];
 
 static seriesStats_t looptimeStats;
+
+// DashWare
+static int64_t rssiPercent;
+static int64_t throttlePercent;
+static int64_t homeDistanceMeters;
+static int64_t homeDirectionDegrees;
+static int64_t mAhPerKm;
+static int64_t cumulativeTripDistance; // In centimeters
+static int64_t lastFrameTimeTripDistance;
+static int64_t azimuth;
+static int64_t gpsSpdCmPerSecond;
+static int64_t currentDrawMilliamps;
+static int64_t gpsHomeLat;
+static int64_t gpsHomeLon;
+static int64_t gpsCurrentLat;
+static int64_t gpsCurrentLon;
+static int64_t gpsCurrentCourse;
+
+
 
 #define ADJUSTMENT_FUNCTION_COUNT 21
 static char *INFLIGHT_ADJUSTMENT_FUNCTIONS[ADJUSTMENT_FUNCTION_COUNT] = {
@@ -217,8 +248,11 @@ static bool fprintfMainFieldInUnit(flightLog_t *log, FILE *file, int fieldIndex,
         break;
         case UNIT_AMPS:
             if (fieldIndex == log->mainFieldIndexes.amperageLatest) {
-                if(log->sysConfig.vbatType == INAV_V2)
-                    fprintf(file, "%.3f", (uint16_t)fieldValue / 100.0);
+				if (log->sysConfig.vbatType == INAV_V2) {
+	                fprintf(file, "%.3f", (uint16_t)fieldValue / 100.0);
+					if(options.dashWare)
+						currentDrawMilliamps = (int64_t)fieldValue * 10;
+				}
                 else
                     fprintfMilliampsInUnit(file, flightLogAmperageADCToMilliamps(log, (uint16_t)fieldValue), unit);
                 return true;
@@ -289,6 +323,24 @@ static bool fprintfMainFieldInUnit(flightLog_t *log, FILE *file, int fieldIndex,
             } else {
                 fprintf(file, "%3u", (uint32_t) fieldValue);
             }
+
+		if (options.dashWare)
+		{
+			if (fieldIndex == log->mainFieldIndexes.rssi)
+			{
+				// Store RSSI percent to use for dashWare
+				rssiPercent = (((int64_t)fieldValue) / 1023.0) * 99;
+			}
+
+			if (fieldIndex == log->mainFieldIndexes.motor[0])
+			{
+				// Store Throttle percent to use for dashWare
+				throttlePercent = ((int64_t)fieldValue) - 1000;
+				throttlePercent = (throttlePercent / 1000.0) * 100;
+			}
+
+		}
+
             return true;
         break;
         default:
@@ -474,6 +526,86 @@ static void updateSimulations(flightLog_t *log, int64_t *frame, int64_t currentT
     }
 }
 
+float sin_approx(float x)
+{
+	int32_t xint = x;
+	if (xint < -32 || xint > 32) return 0.0f;                               // Stop here on error input (5 * 360 Deg)
+	while (x >  M_PIf) x -= (2.0f * M_PIf);                                 // always wrap input angle to -PI..PI
+	while (x < -M_PIf) x += (2.0f * M_PIf);
+	if (x >(0.5f * M_PIf)) x = (0.5f * M_PIf) - (x - (0.5f * M_PIf));   // We just pick -90..+90 Degree
+	else if (x < -(0.5f * M_PIf)) x = -(0.5f * M_PIf) - ((0.5f * M_PIf) + x);
+	float x2 = x * x;
+	return x + x * x2 * (sinPolyCoef3 + x2 * (sinPolyCoef5 + x2 * (sinPolyCoef7 + x2 * sinPolyCoef9)));
+}
+
+float cos_approx(float x)
+{
+	return sin_approx(x + (0.5f * M_PIf));
+}
+
+float MAX(float v1, float v2) {
+	if (v1 > v2)
+		return v1;
+	else
+		return v2;
+}
+
+float MIN(float v1, float v2) {
+	if (v1 < v2)
+		return v1;
+	else
+		return v2;
+}
+
+float atan2_approx(float y, float x)
+{
+#define atanPolyCoef1  3.14551665884836e-07f
+#define atanPolyCoef2  0.99997356613987f
+#define atanPolyCoef3  0.14744007058297684f
+#define atanPolyCoef4  0.3099814292351353f
+#define atanPolyCoef5  0.05030176425872175f
+#define atanPolyCoef6  0.1471039133652469f
+#define atanPolyCoef7  0.6444640676891548f
+
+	float res, absX, absY;
+	absX = fabsf(x);
+	absY = fabsf(y);
+	res = MAX(absX, absY);
+	if (res) res = MIN(absX, absY) / res;
+	else res = 0.0f;
+	res = -((((atanPolyCoef5 * res - atanPolyCoef4) * res - atanPolyCoef3) * res - atanPolyCoef2) * res - atanPolyCoef1) / ((atanPolyCoef7 * res + atanPolyCoef6) * res + 1.0f);
+	if (absY > absX) res = (M_PIf / 2.0f) - res;
+	if (x < 0) res = M_PIf - res;
+	if (y < 0) res = -res;
+	return res;
+}
+
+void GPS_distance_cm_bearing(int64_t currentLat1, int64_t currentLon1, int64_t destinationLat2, int64_t destinationLon2)
+{
+	float GPS_scaleLonDown = cos_approx((fabsf((float)gpsHomeLat) / 10000000.0f) * 0.0174532925f);
+
+	const float dLat = destinationLat2 - currentLat1; // difference of latitude in 1/10 000 000 degrees
+	const float dLon = (float)(destinationLon2 - currentLon1) * GPS_scaleLonDown;
+
+	homeDistanceMeters = sqrtf(sq(dLat) + sq(dLon)) * DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR;
+	homeDistanceMeters = homeDistanceMeters / 100;
+
+	int64_t bearing = 9000.0f + RADIANS_TO_CENTIDEGREES(atan2_approx(-dLat, dLon));      // Convert the output radians to 100xdeg
+
+	if (bearing < 0)
+		bearing += 3600;
+
+	bearing = bearing / 100;
+
+	azimuth = bearing + 180;
+	if (azimuth > 359)
+		azimuth = azimuth - 360;
+
+	homeDirectionDegrees = bearing - gpsCurrentCourse;
+	if (homeDirectionDegrees < 0)
+		homeDirectionDegrees += 360;
+}
+
 /**
  * Print the GPS fields from the given GPS frame as comma-separated values (the GPS frame time is not printed).
  */
@@ -492,7 +624,18 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
         if (i == log->gpsFieldIndexes.time)
             continue;
 
-        if (needComma)
+		if (options.dashWare) {
+			if (i == log->gpsFieldIndexes.GPS_coord[0])
+				gpsCurrentLat = frame[i];
+
+			if (i == log->gpsFieldIndexes.GPS_coord[1])
+				gpsCurrentLon = frame[i];
+
+			if (i == log->gpsFieldIndexes.GPS_ground_course)
+				gpsCurrentCourse = frame[i] / 10; // Decidegrees
+		}
+
+		if (needComma)
             fprintf(file, ", ");
         else
             needComma = true;
@@ -513,6 +656,8 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
                     fprintf(file, "%" PRId64, frame[i]);
                 } else if (options.unitGPSSpeed == UNIT_METERS_PER_SECOND) {
                     fprintf(file, "%" PRId64 ".%02u", frame[i] / 100, (unsigned) (llabs(frame[i]) % 100));
+					if (options.dashWare)
+						gpsSpdCmPerSecond = frame[i];						
                 } else {
                     fprintf(file, "%.2f", convertMetersPerSecondToUnit(frame[i] / 100.0, options.unitGPSSpeed));
                 }
@@ -525,7 +670,66 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
                 fprintf(file, "%" PRId64, frame[i]);
         }
     }
+
+
+	// Adding Dashware fields
+	if (options.dashWare) {
+		// rssi (%)
+		fprintf(file, ", %" PRId64, rssiPercent);
+		// Throttle (%)
+		fprintf(file, ", %" PRId64, throttlePercent);
+
+		// Check if home point coordinates has changed by A LOT since the last iteration. It indicates a bogus frame
+		if ( (log->sysConfig.gpsHomeLatitude ) < (gpsHomeLat - 100000) || (log->sysConfig.gpsHomeLatitude) > (gpsHomeLat + 100000 ) 
+			|| (log->sysConfig.gpsHomeLongitude) < (gpsHomeLon - 100000) || (log->sysConfig.gpsHomeLongitude) > (gpsHomeLon + 100000) )
+		{
+			// New home is a lot different than the previous one, so we will keep the previous one
+		}
+		else
+		{
+			gpsHomeLat = log->sysConfig.gpsHomeLatitude;
+			gpsHomeLon = log->sysConfig.gpsHomeLongitude;
+		}
+		
+		// Check if there are valid GPS data before processing home distance, travelled distance, home direction and azimuth
+		if (gpsCurrentLat != 0 && gpsCurrentLon != 0 && gpsCurrentCourse >= 0 && gpsCurrentCourse < 360)
+		{
+			// If Home lat and Home longitude is 0, then it's probably the first valid gps record. Set it now.
+			if (gpsHomeLat == 0 && gpsHomeLon == 0) {
+				gpsHomeLat = log->sysConfig.gpsHomeLatitude;
+				gpsHomeLon = log->sysConfig.gpsHomeLongitude;
+			}
+
+			GPS_distance_cm_bearing(gpsCurrentLat, gpsCurrentLon, gpsHomeLat, gpsHomeLon);
+
+			// Every 100ms, check for GPS ground speed and accumulate the travelled distance
+			if (lastFrameTimeTripDistance < (lastFrameTime / 100000))
+			{
+				lastFrameTimeTripDistance = lastFrameTime / 100000;
+				cumulativeTripDistance += gpsSpdCmPerSecond / 10;
+			}
+
+			mAhPerKm = currentDrawMilliamps / (gpsSpdCmPerSecond * 0.036);
+		}
+
+		// Distance (m)
+		fprintf(file, ", %" PRId64, homeDistanceMeters);
+		// homeDirection
+		fprintf(file, ", %" PRId64, homeDirectionDegrees);
+		// mAhPerKm
+		fprintf(file, ", %" PRId64, mAhPerKm);
+		// cumulativeTripDistance
+		fprintf(file, ", %" PRId64, cumulativeTripDistance / 100);
+		// azimuth
+		fprintf(file, ", %" PRId64, azimuth);
+
+	}
+
+
 }
+
+
+
 
 void outputGPSFrame(flightLog_t *log, int64_t *frame)
 {
@@ -544,7 +748,8 @@ void outputGPSFrame(flightLog_t *log, int64_t *frame)
 
     if (haveRequiredFields && haveRequiredPrecision) {
 		gpxWriterAddPoint(gpx, log, gpsFrameTime, frame[log->gpsFieldIndexes.GPS_coord[0]], frame[log->gpsFieldIndexes.GPS_coord[1]], frame[log->gpsFieldIndexes.GPS_altitude]);
-    }
+	}
+
 
     createGPSCSVFile(log);
 
@@ -964,6 +1169,10 @@ void writeMainCSVHeader(flightLog_t *log)
         outputFieldNamesHeader(csvFile, &log->frameDefs['G'], gpsGFieldUnit, true);
     }
 
+	if (options.dashWare && log->frameDefs['G'].fieldCount > 0) {
+		fprintf(csvFile, ", rssi (%%), Throttle (%%), Distance (m), homeDirection, mAhPerKm, cumulativeTripDistance, azimuth");
+	}
+
     fprintf(csvFile, "\n");
 }
 
@@ -1265,6 +1474,7 @@ void printUsage(const char *argv0)
         "   --limits                 Print the limits and range of each field\n"
         "   --stdout                 Write log to stdout instead of to a file\n"
         "   --datetime               Add a dateTime column with UTC date time\n"
+		"   --dashware               Add some relevant fields for overlay using DashWare (forces --datetime and --merge-gps)\n"
         "   --unit-amperage <unit>   Current meter unit (raw|mA|A), default is A (amps)\n"
         "   --unit-flags <unit>      State flags unit (raw|flags), default is flags\n"
         "   --unit-frame-time <unit> Frame timestamp unit (us|s), default is us (microseconds)\n"
@@ -1328,6 +1538,7 @@ void parseCommandlineOptions(int argc, char **argv)
             {"stdout", no_argument, &options.toStdout, 1},
             { "merge-gps", no_argument, &options.mergeGPS, 1 },
             { "datetime", no_argument, &options.datetime, 1 },
+			{"dashware", no_argument, &options.dashWare, 1 },
             {"simulate-imu", no_argument, &options.simulateIMU, 1},
             {"simulate-current-meter", no_argument, &options.simulateCurrentMeter, 1},
             {"imu-ignore-mag", no_argument, &options.imuIgnoreMag, 1},
@@ -1454,6 +1665,12 @@ int main(int argc, char **argv)
     platform_init();
 
     parseCommandlineOptions(argc, argv);
+
+	if (options.dashWare)
+	{
+		options.datetime = 1;
+		options.mergeGPS = 1;
+	}
 
     if (options.help || argc == 1) {
         printUsage(argv[0]);
