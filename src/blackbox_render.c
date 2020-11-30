@@ -1721,7 +1721,7 @@ int main(int argc, char **argv)
         if (stat(outputDirectory, &directoryStat) != 0) {
             directory_create(outputDirectory);
         }
-        uint fsize = strlen(outputDirectory) +  (int) (logNameEnd - logNameStart) + 2;
+        unsigned int fsize = strlen(outputDirectory) +  (int) (logNameEnd - logNameStart) + 2;
         bool ok = false;
         if (fsize <= PATH_MAX) {
             options.outputPrefix = malloc(fsize);
