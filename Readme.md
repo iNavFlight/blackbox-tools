@@ -4,11 +4,9 @@
 
 ## Introduction
 
-These tools allow you to convert flight data logs recorded by Cleanflight's Blackbox feature into CSV files
-(comma-separated values) for analysis, or into a series of PNG files which you could turn into a video.
+These tools allow you to convert flight data logs recorded by inav's Blackbox feature into CSV files (comma-separated values) for analysis, or into a series of PNG files which you could turn into a video.
 
-You can download the latest executable versions of these tools for Mac or Windows from the "releases" tab above. If
-you're running Linux, you must build the tools from source (instructions are further down this page).
+You can download the latest executable versions of these tools for Linux, Mac or Windows from the "releases" tab above. If you're running Linux on ARM or FreeBSD, you must build the tools from source (instructions are further down this page).
 
 ## Using the blackbox_decode tool
 
@@ -18,12 +16,9 @@ This tool converts a flight log binary ".TXT" file into CSV format. Typical usag
 blackbox_decode LOG00001.TXT
 ```
 
-That'll decode the log to `LOG00001.01.csv` and print out some statistics about the log. If you're using Windows, you
-can drag and drop your log files onto `blackbox_decode` and they'll all be decoded. Please note that you shouldn't
-discard the original ".TXT" file, because it is required as input for other tools like the PNG image renderer.
+That'll decode the log to `LOG00001.01.csv` and print out some statistics about the log. If you're using Windows, you can drag and drop your log files onto `blackbox_decode` and they'll all be decoded. Please note that you shouldn't discard the original ".TXT" file, because it is required as input for other tools like the PNG image renderer.
 
-If your log file contains GPS data then a ".gpx" file will also be produced. This file can be opened in Google Earth
-or some other GPS mapping software for analysis. This feature is experimental.
+If your log file contains GPS data then a ".gpx" file will also be produced. This file can be opened in Google Earth or some other GPS mapping software for analysis. This feature is experimental.
 
 Use the `--help` option to show more details:
 
@@ -39,7 +34,9 @@ Options:
    --limits                 Print the limits and range of each field
    --stdout                 Write log to stdout instead of to a file
    --datetime               Add a dateTime column with UTC date time
+   --dashware               Add some relevant fields for overlay using DashWare (forces --datetime and --merge-gps)
    --unit-amperage <unit>   Current meter unit (raw|mA|A), default is A (amps)
+   --unit-flags <unit>      State flags unit (raw|flags), default is flags
    --unit-frame-time <unit> Frame timestamp unit (us|s), default is us (microseconds)
    --unit-height <unit>     Height unit (m|cm|ft), default is cm (centimeters)
    --unit-rotation <unit>   Rate of rotation unit (raw|deg/s|rad/s), default is raw
@@ -60,8 +57,7 @@ Options:
 
 ## Using the blackbox_render tool
 
-This tool converts a flight log binary ".TXT" file into a series of transparent PNG images that you could overlay onto
-your flight video using a video editor (like [DaVinci Resolve][] ). Typical usage (from the command line) would be like:
+This tool converts a flight log binary ".TXT" file into a series of transparent PNG images that you could overlay onto your flight video using a video editor (like [DaVinci Resolve][] ). Typical usage (from the command line) would be like:
 
 ```bash
 blackbox_render LOG00001.TXT
@@ -100,8 +96,7 @@ Options:
    --gapless              Fill in gaps in the log with straight lines
 ```
 
-(At least on Windows) if you just want to render a log file using the defaults, you can drag and drop a log onto the
-blackbox_render program and it'll start generating the PNGs immediately.
+(At least on Windows) if you just want to render a log file using the defaults, you can drag and drop a log onto the blackbox_render program and it'll start generating the PNGs immediately.
 
 [DaVinci Resolve]: https://www.blackmagicdesign.com/products/davinciresolve
 
@@ -111,40 +106,23 @@ blackbox_render program and it'll start generating the PNGs immediately.
 
 [DaVinci Resolve][] is one free option for turning your PNGs into a video that is synced with your flight video.
 
-In Resolve, create a new project. On the Media tab, find your flight video and drag it from the top pane to the bottom
-one to add it to your media library. When prompted, choose the option to change your framerate/resolution settings to
-match the video you added. Now add the PNG series that you rendered with `blackbox_render` (it'll be represented as a
-single file). If the PNGs don't appear in the media library, try right clicking on the folder that contains them and 
+In Resolve, create a new project. On the Media tab, find your flight video and drag it from the top pane to the bottom one to add it to your media library. When prompted, choose the option to change your framerate/resolution settings to match the video you added. Now add the PNG series that you rendered with `blackbox_render` (it'll be represented as a single file). If the PNGs don't appear in the media library, try right clicking on the folder that contains them and
 selecting "Refresh".
 
-Now over on the Edit tab, click File -> New Timeline and click Ok. At the top left, switch over to the Media Pool. Drag
-and drop your flight video onto the timeline, then drag and drop the Blackbox stream onto the video track above it.
-You'll need to play around with the alignment between the two tracks to sync things up (I usually sync up the audio from
-the initial throttle-up with the throttle-up shown on the motor graph). 
+Now over on the Edit tab, click File -> New Timeline and click Ok. At the top left, switch over to the Media Pool. Drag and drop your flight video onto the timeline, then drag and drop the Blackbox stream onto the video track above it. You'll need to play around with the alignment between the two tracks to sync things up (I usually sync up the audio from the initial throttle-up with the throttle-up shown on the motor graph).
 
-If your Blackbox PNGs were rendered using the default settings (30 FPS) and your flight video is 60 FPS, you'll need to
-right-click on the Blackbox stream and click "change clip speed". Enter 30 FPS since this is the FPS that you rendered
-the Blackbox PNGs at.
+If your Blackbox PNGs were rendered using the default settings (30 FPS) and your flight video is 60 FPS, you'll need to right-click on the Blackbox stream and click "change clip speed". Enter 30 FPS since this is the FPS that you rendered the Blackbox PNGs at.
 
-Save your viewers' ears by dragging the midpoint of the audio track downwards to reduce its volume, or replace the
-audio with your own music track!
+Save your viewers' ears by dragging the midpoint of the audio track downwards to reduce its volume, or replace the audio with your own music track!
 
-Now on the Deliver tab, choose something like the "video sharing export" Easy Setup preset. On the left pane, choose an
-output folder for the "render to:" setting. Then click the "add job to render queue" button on the left. Now click the
-"start render" button on the right to begin rendering the output.
+Now on the Deliver tab, choose something like the "video sharing export" Easy Setup preset. On the left pane, choose an output folder for the "render to:" setting. Then click the "add job to render queue" button on the left. Now click the "start render" button on the right to begin rendering the output.
 
 ## Building tools
-If you just want to download some prebuilt versions of these tools, head to the "releases" tab on the GitHub
-page. However, if you want to build your own binaries, or you're on Linux where we haven't provided binaries, please
-read on.
+If you just want to download some prebuilt versions of these tools, head to the "releases" tab on the GitHub page. However, if you want to build your own binaries, or you're an unsupported platform where we haven't provided binaries, please read on.
 
-The `blackbox_decode` tool for turning binary flight logs into CSV doesn't depend on any libraries, so can be built by
-running `make obj/blackbox_decode`. You can add the resulting `obj/blackbox_decode` program to your system path to
-make it easier to run.
+The `blackbox_decode` tool for turning binary flight logs into CSV doesn't depend on any libraries, so can be built by running `make obj/blackbox_decode`. You can add the resulting `obj/blackbox_decode` program to your system path to make it easier to run.
 
-The `blackbox_render` tool renders a binary flight log into a series of PNG images which you can overlay on your flight
-video. Please read the section below that most closely matches your operating system for instructions on getting the `libcairo`
-library required to build the `blackbox_render` tool.
+The `blackbox_render` tool renders a binary flight log into a series of PNG images which you can overlay on your flight video. Please read the section below that most closely matches your operating system for instructions on getting the `libcairo` library required to build the `blackbox_render` tool.
 
 #### Ubuntu
 You can get the tools required for building by entering these commands into the terminal:
@@ -157,8 +135,7 @@ sudo apt-get install make gcc libcairo2-dev
 Build blackbox_render by running `make obj/blackbox_render` (or build both tools by just running `make`).
 
 #### MacOSX
-The easiest way to build is to install the [Xcode development tool][], then install an environment like [Homebrew][] 
-or [MacPorts][] onto your system.
+The easiest way to build is to install the [Xcode development tool][], then install an environment like [Homebrew][] or [MacPorts][] onto your system.
 
 From MacPorts, you would do this to get LibCairo:
 
@@ -177,9 +154,7 @@ brew install cairo --without-x11 pkg-config
 
 Afterwards you can run `make` to build blackbox_render.
 
-If you get an error "Package 'xcb-shm', required by 'cairo', not found", your installed version of Cairo depends on
-X11 but your Homebrew X11 libraries are not on your pkgconfig path, so the build process cannot find them. Try this to
-add them to your path:
+If you get an error "Package 'xcb-shm', required by 'cairo', not found", your installed version of Cairo depends on X11 but your Homebrew X11 libraries are not on your pkgconfig path, so the build process cannot find them. Try this to add them to your path:
 
 ```bash
 $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/opt/X11/lib/pkgconfig
@@ -190,9 +165,7 @@ $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/opt/X11/lib/pkgconfig
 [MacPorts]: https://www.macports.org/
 
 #### Windows
-The tools can be built with Visual Studio Express 2013, just open up the solution in the `visual-studio/`
-folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built
-executable.
+The tools can be built with Visual Studio Express 2013, just open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable.
 
 ## License
 
@@ -205,16 +178,16 @@ The binary version of `blackbox_render` for MacOSX is statically linked to these
  - libcairo & libpixman http://cairographics.org/ (LGPL)
  - libfreetype http://www.freetype.org/ (BSD-like/GPLv2)
  - libpng16 http://www.libpng.org/pub/png/libpng.html
- 
+
 The windows binary of `blackbox_render` additionally ships with these DLLs:
 
  - libiconv https://www.gnu.org/software/libiconv/ (LGPL)
  - libfontconfig http://www.freedesktop.org/wiki/Software/fontconfig/
  - libxml2 http://xmlsoft.org/ (MIT)
  - liblzma http://tukaani.org/xz/ (Public Domain)
- 
+
 This font is included with both binary and source distributions:
 
  - Source Sans Pro - Regular https://github.com/adobe-fonts/source-sans-pro (SIL Open Font license)
- 
+
 Both binary and source builds include IMU code from Baseflight https://github.com/multiwii/baseflight (GPLv3)
