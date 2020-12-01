@@ -8,7 +8,7 @@
 # Makefile for building the blackbox data decoder.
 #
 # Invoke this with 'make help' to see the list of supported targets.
-# 
+#
 
 ###############################################################################
 # Things that the user might override on the commandline
@@ -16,10 +16,10 @@
 
 # Compile-time options
 OPTIONS		?=
-BLACKBOX_VERSION     ?= 
+BLACKBOX_VERSION     ?=
 
 # Debugger optons, must be empty or GDB
-DEBUG = GDB
+DEBUG =
 
 ###############################################################################
 # Things that need to be maintained as the source changes
@@ -56,12 +56,12 @@ INCLUDE_DIRS	 = $(SRC_DIR)
 ifeq ($(DEBUG),GDB)
 OPTIMIZE	 = -O0
 LTO_FLAGS	 = $(OPTIMIZE)
+DEBUG_FLAGS	 = -g3 -ggdb
 else
 OPTIMIZE	 = -O3
 LTO_FLAGS	 = -flto $(OPTIMIZE)
+DEBUG_FLAGS =
 endif
-
-DEBUG_FLAGS	 = -g3 -ggdb
 
 CFLAGS		= $(ARCH_FLAGS) \
 		$(LTO_FLAGS) \
@@ -69,25 +69,29 @@ CFLAGS		= $(ARCH_FLAGS) \
 		$(addprefix -I,$(INCLUDE_DIRS)) \
 		$(if $(strip $(BLACKBOX_VERSION)), -DBLACKBOX_VERSION=$(BLACKBOX_VERSION)) \
 		$(DEBUG_FLAGS) \
-		-std=gnu99 \
 		-pthread \
 		-Wall -pedantic -Wextra -Wshadow
 
 CFLAGS += `pkg-config --cflags cairo` `pkg-config --cflags freetype2`
 
-ifeq ($(BUILD_STATIC), MACOSX)
-	# For cairo built with ./configure --enable-quartz=no  --without-x --enable-pdf=no --enable-ps=no --enable-script=no --enable-xcb=no --enable-ft=yes --enable-fc=no --enable-xlib=no
-	LDFLAGS += -Llib/macosx -lcairo -lpixman-1 -lpng16 -lz -lfreetype -lbz2
+# Supports native builds on
+# * Linux,FreeBSD (system dynamic libraries)
+# * Macos (staticly linked)
+# * Windows via mingw32 hosted on Linux
+
+SYSTGT := $(shell $(CC) -dumpmachine)
+ifneq (, $(findstring darwin, $(SYSTGT)))
+ RENDER_LDFLAGS = -Llib/macosx -lcairo -lpixman-1 -lpng16 -lz -lfreetype -lbz2
+else ifneq (, $(findstring mingw, $(SYSTGT)))
+ RENDER_LDFLAGS = -Llib/win32/ -lcairo-2 -lfontconfig-1 -lfreetype-6 -liconv-2 -llzma-5 -lpixman-1-0 -lpng15-15 -lxml2-2 -lzlib1
 else
-	# Dynamic linking
-	LDFLAGS += `pkg-config --libs cairo` `pkg-config --libs freetype2`
+ RENDER_LDFLAGS = `pkg-config --libs cairo` `pkg-config --libs freetype2`
 endif
 
 LDFLAGS += -lm
 
 # Required with GCC. Clang warns when using flag while linking, so you can comment this line out if you're using clang:
 LDFLAGS += -pthread
-
 
 ###############################################################################
 # No user-serviceable parts below
@@ -113,7 +117,7 @@ $(DECODER_ELF):  $(DECODER_OBJS)
 	@$(CC) -o $@ $^ $(LDFLAGS)
 
 $(RENDERER_ELF):  $(RENDERER_OBJS)
-	@$(CC) -o $@ $^ $(LDFLAGS)
+	@$(CC) -o $@ $^ $(RENDER_LDFLAGS) $(LDFLAGS)
 
 $(ENCODER_TESTBED_ELF): $(ENCODER_TESTBED_OBJS)
 	@$(CC) -o $@ $^ $(LDFLAGS)
