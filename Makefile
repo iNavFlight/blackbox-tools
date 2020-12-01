@@ -63,6 +63,8 @@ LTO_FLAGS	 = -flto $(OPTIMIZE)
 DEBUG_FLAGS =
 endif
 
+# Setting ARCH_FLAGS=-m32 permits building on Linux x86_64 for ia32 ..
+
 CFLAGS		= $(ARCH_FLAGS) \
 		$(LTO_FLAGS) \
 		$(addprefix -D,$(OPTIONS)) \
@@ -114,13 +116,13 @@ TARGET_MAP   = $(OBJECT_DIR)/blackbox_decode.map
 all : $(DECODER_ELF) $(RENDERER_ELF) $(ENCODER_TESTBED_ELF)
 
 $(DECODER_ELF):  $(DECODER_OBJS)
-	@$(CC) -o $@ $^ $(LDFLAGS)
+	@$(CC) $(ARCH_FLAGS) -o $@ $^ $(LDFLAGS)
 
 $(RENDERER_ELF):  $(RENDERER_OBJS)
-	@$(CC) -o $@ $^ $(RENDER_LDFLAGS) $(LDFLAGS)
+	@$(CC) $(ARCH_FLAGS) -o $@ $^ $(RENDER_LDFLAGS) $(LDFLAGS)
 
 $(ENCODER_TESTBED_ELF): $(ENCODER_TESTBED_OBJS)
-	@$(CC) -o $@ $^ $(LDFLAGS)
+	@$(CC) $(ARCH_FLAGS) -o $@ $^ $(LDFLAGS)
 
 # Compile
 $(OBJECT_DIR)/%.o: %.c
