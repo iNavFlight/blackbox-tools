@@ -87,6 +87,27 @@ decodeOptions_t options = {
     .unitFlags = UNIT_FLAGS,
 };
 
+typedef enum {
+	ACRO_MODE = (1 << 0),
+	ANGLE_MODE = (1 << 1),
+	HORIZON_MODE = (1 << 2),
+	NAV_ALTHOLD_MODE = (1 << 3), // old BARO
+	HEADING_MODE = (1 << 4),
+	HEADFREE_MODE = (1 << 5),
+	NAV_RTH_MODE = (1 << 8), // old GPS_HOME
+	NAV_POSHOLD_MODE = (1 << 9), // old GPS_HOLD
+	MANUAL_MODE = (1 << 10),
+	NAV_LAUNCH_MODE = (1 << 15),
+	FAILSAFE_MODE = (1 << 19),
+	NAV_WP_MODE = (1 << 20),
+	FLAPERON = (1 << 26),
+	TURN_ASSISTANT = (1 << 27),
+	AUTO_TUNE = (1 << 29), // old G-Tune
+	NAV_CRUISE_MODE = (1 << 36),
+} flightModeFlags_e;
+
+#define FLIGHT_MODE(mask) (flightModeFlags & (mask))
+
 //We'll use field names to identify GPS field units so the values can be formatted for display
 typedef enum {
     GPS_FIELD_TYPE_INTEGER,
@@ -141,7 +162,8 @@ static int64_t gpsHomeLon;
 static int64_t gpsCurrentLat;
 static int64_t gpsCurrentLon;
 static int64_t gpsCurrentCourse;
-
+static int64_t navState;
+static int64_t flightModeFlags;
 
 
 #define ADJUSTMENT_FUNCTION_COUNT 21
@@ -606,6 +628,47 @@ void GPS_distance_cm_bearing(int64_t currentLat1, int64_t currentLon1, int64_t d
 		homeDirectionDegrees += 360;
 }
 
+void flightModeName(FILE *file) {
+	char *p = "ACRO";
+
+	bool cruise = false;
+	bool failsafe = false;
+	
+	if (navState == 33 || navState == 34)
+		cruise = true;
+	
+	if (navState == 10 && !FLIGHT_MODE(NAV_RTH_MODE))
+		failsafe = true;
+
+	if (failsafe) {
+		p = "!FS!";
+	} else if (FLIGHT_MODE(MANUAL_MODE)) {
+		p = "MANU";
+	} else if (FLIGHT_MODE(NAV_RTH_MODE)){
+		p = "RTH ";
+	} else if (FLIGHT_MODE(NAV_POSHOLD_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE)){
+		p = "A+PH";
+	} else if (cruise && FLIGHT_MODE(NAV_ALTHOLD_MODE)){
+		p = "3CRS";
+	} else if (cruise){
+		p = "CRS ";
+	} else if (FLIGHT_MODE(NAV_POSHOLD_MODE)){
+		p = " PH ";
+	} else if (FLIGHT_MODE(NAV_ALTHOLD_MODE)){
+		p = " AH ";
+	} else if (FLIGHT_MODE(NAV_WP_MODE)){
+		p = " WP ";
+	} else if (FLIGHT_MODE(ANGLE_MODE)){
+		p = "ANGL";
+	} else if (FLIGHT_MODE(HORIZON_MODE)){
+		p = "HOR ";
+	}
+
+	fprintf(file, ", ");
+	fprintf(file, "%s", p);
+
+}
+
 /**
  * Print the GPS fields from the given GPS frame as comma-separated values (the GPS frame time is not printed).
  */
@@ -723,6 +786,8 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 		// azimuth
 		fprintf(file, ", %" PRId64, azimuth);
 
+		flightModeName(file);
+
 	}
 
 
@@ -779,6 +844,10 @@ void outputSlowFrameFields(flightLog_t *log, int64_t *frame)
             needComma = true;
         }
 
+		if (i == log->slowFieldIndexes.flightModeFlags && options.unitFlags == UNIT_FLAGS) {
+			flightModeFlags = frame[i];
+		}
+
         if ((i == log->slowFieldIndexes.flightModeFlags || i == log->slowFieldIndexes.stateFlags)
                 && options.unitFlags == UNIT_FLAGS) {
 
@@ -818,6 +887,10 @@ void outputMainFrameFields(flightLog_t *log, int64_t frameTime, int64_t *frame)
         } else {
             needComma = true;
         }
+
+		if (log->mainFieldIndexes.navState == i) {
+			navState = frame[i];
+		}
 
         if (i == FLIGHT_LOG_FIELD_INDEX_TIME) {
             // Use the time the caller provided instead of the time in the frame
@@ -1170,7 +1243,7 @@ void writeMainCSVHeader(flightLog_t *log)
     }
 
 	if (options.dashWare && log->frameDefs['G'].fieldCount > 0) {
-		fprintf(csvFile, ", rssi (%%), Throttle (%%), Distance (m), homeDirection, mAhPerKm, cumulativeTripDistance, azimuth");
+		fprintf(csvFile, ", rssi (%%), Throttle (%%), Distance (m), homeDirection, mAhPerKm, cumulativeTripDistance, azimuth, flightMode");
 	}
 
     fprintf(csvFile, "\n");
