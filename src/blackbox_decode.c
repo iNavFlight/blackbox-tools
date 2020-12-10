@@ -1221,7 +1221,7 @@ void writeMainCSVHeader(flightLog_t *log)
     }
 
 	// Add flight mode, rssi (%) and Throttle (%) headers
-	fprintf(csvFile, ", flightMode, rssi (%%), Throttle (%%)");
+	fprintf(csvFile, ", simplifiedMode, rssi (%%), Throttle (%%)");
 
     if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
         fprintf(csvFile, ", ");
