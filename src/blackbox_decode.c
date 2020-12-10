@@ -85,29 +85,7 @@ decodeOptions_t options = {
     .unitFlags = UNIT_FLAGS,
 };
 
-typedef enum {
-	ACRO_MODE = (1 << 0),
-	ANGLE_MODE = (1 << 1),
-	HORIZON_MODE = (1 << 2),
-	NAV_ALTHOLD_MODE = (1 << 3), // old BARO
-	HEADING_MODE = (1 << 4),
-	HEADFREE_MODE = (1 << 5),
-	NAV_RTH_MODE = (1 << 8), // old GPS_HOME
-	NAV_POSHOLD_MODE = (1 << 9), // old GPS_HOLD
-	MANUAL_MODE = (1 << 10),
-	NAV_WP_MODE = (1 << 19),
-} flightModeFlags_e;
-
 #define FLIGHT_MODE(mask) (flightModeFlags & (mask))
-
-//We'll use field names to identify GPS field units so the values can be formatted for display
-typedef enum {
-    GPS_FIELD_TYPE_INTEGER,
-    GPS_FIELD_TYPE_DEGREES_TIMES_10, // for headings
-    GPS_FIELD_TYPE_COORDINATE_DEGREES_TIMES_10000000,
-    GPS_FIELD_TYPE_METERS_PER_SECOND_TIMES_100,
-    GPS_FIELD_TYPE_METERS
-} GPSFieldType;
 
 static GPSFieldType gpsFieldTypes[FLIGHT_LOG_MAX_FIELDS];
 
@@ -156,6 +134,7 @@ static int64_t gpsCurrentLon;
 static int64_t gpsCurrentCourse;
 static int64_t navState;
 static int64_t flightModeFlags;
+static int64_t failsafeFlags;
 
 
 #define ADJUSTMENT_FUNCTION_COUNT 21
@@ -619,10 +598,11 @@ void flightModeName(FILE *file) {
 	bool cruise = false;
 	bool failsafe = false;
 	
-	if (navState == 33 || navState == 34)
+	if (navState == NAV_STATE_CRUISE_2D_ADJUSTING || navState == NAV_STATE_CRUISE_2D_IN_PROGRESS ||
+		navState == NAV_STATE_CRUISE_3D_ADJUSTING || navState == NAV_STATE_CRUISE_3D_IN_PROGRESS)
 		cruise = true;
 	
-	if (navState == 10 && !FLIGHT_MODE(NAV_RTH_MODE))
+	if (failsafeFlags != FAILSAFE_IDLE)
 		failsafe = true;
 
 	if (failsafe) {
@@ -824,7 +804,11 @@ void outputSlowFrameFields(flightLog_t *log, int64_t *frame)
 			flightModeFlags = frame[i];
 		}
 
-        if ((i == log->slowFieldIndexes.flightModeFlags || i == log->slowFieldIndexes.stateFlags)
+		if (i == log->slowFieldIndexes.failsafePhase && options.unitFlags == UNIT_FLAGS) {
+			failsafeFlags = frame[i];
+		}
+		
+		if ((i == log->slowFieldIndexes.flightModeFlags || i == log->slowFieldIndexes.stateFlags)
                 && options.unitFlags == UNIT_FLAGS) {
 
             if (i == log->slowFieldIndexes.flightModeFlags) {
