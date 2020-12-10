@@ -95,13 +95,7 @@ typedef enum {
 	NAV_RTH_MODE = (1 << 8), // old GPS_HOME
 	NAV_POSHOLD_MODE = (1 << 9), // old GPS_HOLD
 	MANUAL_MODE = (1 << 10),
-	NAV_LAUNCH_MODE = (1 << 15),
-	FAILSAFE_MODE = (1 << 19),
-	NAV_WP_MODE = (1 << 20),
-	FLAPERON = (1 << 26),
-	TURN_ASSISTANT = (1 << 27),
-	AUTO_TUNE = (1 << 29), // old G-Tune
-	NAV_CRUISE_MODE = (1 << 36),
+	NAV_WP_MODE = (1 << 19),
 } flightModeFlags_e;
 
 #define FLIGHT_MODE(mask) (flightModeFlags & (mask))
@@ -725,10 +719,6 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 	// Adding information overlay fields (i.e. Dashware)
 	if (options.mergeGPS) {
-		// rssi (%)
-		fprintf(file, ", %" PRId64, rssiPercent);
-		// Throttle (%)
-		fprintf(file, ", %" PRId64, throttlePercent);
 
 		// Check if home point coordinates has changed by A LOT since the last iteration. It indicates a bogus frame
 		if ( (log->sysConfig.gpsHomeLatitude ) < (gpsHomeLat - 100000) || (log->sysConfig.gpsHomeLatitude) > (gpsHomeLat + 100000 ) 
@@ -918,6 +908,11 @@ void outputMainFrameFields(flightLog_t *log, int64_t frameTime, int64_t *frame)
 
 	// Adding Flight Mode
 	flightModeName(csvFile);
+
+	// rssi (%)
+	fprintf(csvFile, ", %" PRId64, rssiPercent);
+	// Throttle (%)
+	fprintf(csvFile, ", %" PRId64, throttlePercent);
 }
 
 void outputMergeFrame(flightLog_t *log)
@@ -1225,8 +1220,8 @@ void writeMainCSVHeader(flightLog_t *log)
         outputFieldNamesHeader(csvFile, &log->frameDefs['S'], slowFieldUnit, false);
     }
 
-	// Add flight mode header
-	fprintf(csvFile, ", flightMode");
+	// Add flight mode, rssi (%) and Throttle (%) headers
+	fprintf(csvFile, ", flightMode, rssi (%%), Throttle (%%)");
 
     if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
         fprintf(csvFile, ", ");
@@ -1235,7 +1230,7 @@ void writeMainCSVHeader(flightLog_t *log)
     }
 
 	if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
-		fprintf(csvFile, ", rssi (%%), Throttle (%%), Distance (m), homeDirection, mAhPerKm, cumulativeTripDistance, azimuth");
+		fprintf(csvFile, ", Distance (m), homeDirection, mAhPerKm, cumulativeTripDistance, azimuth");
 	}
 
     fprintf(csvFile, "\n");
