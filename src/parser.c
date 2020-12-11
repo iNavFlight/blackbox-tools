@@ -246,6 +246,8 @@ static void identifyMainFields(flightLog_t *log, flightLogFrameDef_t *frameDef)
             log->mainFieldIndexes.loopIteration = fieldIndex;
         } else if (strcmp(fieldName, "time") == 0) {
             log->mainFieldIndexes.time = fieldIndex;
+        } else if (strcmp(fieldName, "navState") == 0) {
+            log->mainFieldIndexes.navState = fieldIndex;
         }
     }
 }

@@ -192,3 +192,32 @@ typedef struct flightLogEvent_t
     FlightLogEvent event;
     flightLogEventData_t data;
 } flightLogEvent_t;
+
+typedef enum {
+	GPS_FIELD_TYPE_INTEGER,
+	GPS_FIELD_TYPE_DEGREES_TIMES_10, // for headings
+	GPS_FIELD_TYPE_COORDINATE_DEGREES_TIMES_10000000,
+	GPS_FIELD_TYPE_METERS_PER_SECOND_TIMES_100,
+	GPS_FIELD_TYPE_METERS
+} GPSFieldType;
+
+typedef enum {
+	NAV_STATE_CRUISE_2D_IN_PROGRESS = 30,
+	NAV_STATE_CRUISE_2D_ADJUSTING = 31,
+	NAV_STATE_CRUISE_3D_IN_PROGRESS = 33,
+	NAV_STATE_CRUISE_3D_ADJUSTING = 34,
+
+} navigationFSMState_t;
+
+typedef enum {
+	ACRO_MODE = (1 << 0),
+	ANGLE_MODE = (1 << 1),
+	HORIZON_MODE = (1 << 2),
+	NAV_ALTHOLD_MODE = (1 << 3), // old BARO
+	HEADING_MODE = (1 << 4),
+	HEADFREE_MODE = (1 << 5),
+	NAV_RTH_MODE = (1 << 8), // old GPS_HOME
+	NAV_POSHOLD_MODE = (1 << 9), // old GPS_HOLD
+	MANUAL_MODE = (1 << 10),
+	NAV_WP_MODE = (1 << 19),
+} flightModeFlags_e;

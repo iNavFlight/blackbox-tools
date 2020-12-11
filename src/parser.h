@@ -96,6 +96,7 @@ typedef struct slowFieldIndexes_t {
 typedef struct mainFieldIndexes_t {
     int loopIteration;
     int time;
+	int navState;
 
     int pid[3][3]; //First dimension is [P, I, D], second dimension is axis
 

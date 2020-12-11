@@ -52,7 +52,6 @@ typedef struct decodeOptions_t {
     int simulateCurrentMeter;
     int mergeGPS;
     int datetime;
-	int dashWare;
     const char *outputPrefix;
 
     bool overrideSimCurrentMeterOffset, overrideSimCurrentMeterScale;
@@ -68,7 +67,6 @@ decodeOptions_t options = {
     .simulateCurrentMeter = false,
     .mergeGPS = 0,
     .datetime = 0,
-	.dashWare = 0,
 
     .overrideSimCurrentMeterOffset = false,
     .overrideSimCurrentMeterScale = false,
@@ -87,14 +85,7 @@ decodeOptions_t options = {
     .unitFlags = UNIT_FLAGS,
 };
 
-//We'll use field names to identify GPS field units so the values can be formatted for display
-typedef enum {
-    GPS_FIELD_TYPE_INTEGER,
-    GPS_FIELD_TYPE_DEGREES_TIMES_10, // for headings
-    GPS_FIELD_TYPE_COORDINATE_DEGREES_TIMES_10000000,
-    GPS_FIELD_TYPE_METERS_PER_SECOND_TIMES_100,
-    GPS_FIELD_TYPE_METERS
-} GPSFieldType;
+#define FLIGHT_MODE(mask) (flightModeFlags & (mask))
 
 static GPSFieldType gpsFieldTypes[FLIGHT_LOG_MAX_FIELDS];
 
@@ -125,7 +116,7 @@ static int64_t bufferedGPSFrame[FLIGHT_LOG_MAX_FIELDS];
 
 static seriesStats_t looptimeStats;
 
-// DashWare
+// Additional variables for information overlay
 static int64_t rssiPercent;
 static int64_t throttlePercent;
 static int64_t homeDistanceMeters;
@@ -141,7 +132,9 @@ static int64_t gpsHomeLon;
 static int64_t gpsCurrentLat;
 static int64_t gpsCurrentLon;
 static int64_t gpsCurrentCourse;
-
+static int64_t navState;
+static int64_t flightModeFlags;
+static int64_t failsafeFlags;
 
 
 #define ADJUSTMENT_FUNCTION_COUNT 21
@@ -250,8 +243,7 @@ static bool fprintfMainFieldInUnit(flightLog_t *log, FILE *file, int fieldIndex,
             if (fieldIndex == log->mainFieldIndexes.amperageLatest) {
 				if (log->sysConfig.vbatType == INAV_V2) {
 	                fprintf(file, "%.3f", (uint16_t)fieldValue / 100.0);
-					if(options.dashWare)
-						currentDrawMilliamps = (int64_t)fieldValue * 10;
+					currentDrawMilliamps = (int64_t)fieldValue * 10;
 				}
                 else
                     fprintfMilliampsInUnit(file, flightLogAmperageADCToMilliamps(log, (uint16_t)fieldValue), unit);
@@ -324,22 +316,16 @@ static bool fprintfMainFieldInUnit(flightLog_t *log, FILE *file, int fieldIndex,
                 fprintf(file, "%3u", (uint32_t) fieldValue);
             }
 
-		if (options.dashWare)
-		{
 			if (fieldIndex == log->mainFieldIndexes.rssi)
 			{
-				// Store RSSI percent to use for dashWare
 				rssiPercent = (((int64_t)fieldValue) / 1023.0) * 99;
 			}
 
 			if (fieldIndex == log->mainFieldIndexes.motor[0])
 			{
-				// Store Throttle percent to use for dashWare
 				throttlePercent = ((int64_t)fieldValue) - 1000;
 				throttlePercent = (throttlePercent / 1000.0) * 100;
 			}
-
-		}
 
             return true;
         break;
@@ -606,6 +592,48 @@ void GPS_distance_cm_bearing(int64_t currentLat1, int64_t currentLon1, int64_t d
 		homeDirectionDegrees += 360;
 }
 
+void flightModeName(FILE *file) {
+	char *p = "ACRO";
+
+	bool cruise = false;
+	bool failsafe = false;
+	
+	if (navState == NAV_STATE_CRUISE_2D_ADJUSTING || navState == NAV_STATE_CRUISE_2D_IN_PROGRESS ||
+		navState == NAV_STATE_CRUISE_3D_ADJUSTING || navState == NAV_STATE_CRUISE_3D_IN_PROGRESS)
+		cruise = true;
+	
+	if (failsafeFlags != FAILSAFE_IDLE)
+		failsafe = true;
+
+	if (failsafe) {
+		p = "!FS!";
+	} else if (FLIGHT_MODE(MANUAL_MODE)) {
+		p = "MANU";
+	} else if (FLIGHT_MODE(NAV_RTH_MODE)){
+		p = "RTH ";
+	} else if (FLIGHT_MODE(NAV_POSHOLD_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE)){
+		p = "A+PH";
+	} else if (cruise && FLIGHT_MODE(NAV_ALTHOLD_MODE)){
+		p = "3CRS";
+	} else if (cruise){
+		p = "CRS ";
+	} else if (FLIGHT_MODE(NAV_POSHOLD_MODE)){
+		p = " PH ";
+	} else if (FLIGHT_MODE(NAV_ALTHOLD_MODE)){
+		p = " AH ";
+	} else if (FLIGHT_MODE(NAV_WP_MODE)){
+		p = " WP ";
+	} else if (FLIGHT_MODE(ANGLE_MODE)){
+		p = "ANGL";
+	} else if (FLIGHT_MODE(HORIZON_MODE)){
+		p = "HOR ";
+	}
+
+	fprintf(file, ", ");
+	fprintf(file, "%s", p);
+
+}
+
 /**
  * Print the GPS fields from the given GPS frame as comma-separated values (the GPS frame time is not printed).
  */
@@ -624,16 +652,14 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
         if (i == log->gpsFieldIndexes.time)
             continue;
 
-		if (options.dashWare) {
-			if (i == log->gpsFieldIndexes.GPS_coord[0])
-				gpsCurrentLat = frame[i];
+		if (i == log->gpsFieldIndexes.GPS_coord[0])
+			gpsCurrentLat = frame[i];
 
-			if (i == log->gpsFieldIndexes.GPS_coord[1])
-				gpsCurrentLon = frame[i];
+		if (i == log->gpsFieldIndexes.GPS_coord[1])
+			gpsCurrentLon = frame[i];
 
-			if (i == log->gpsFieldIndexes.GPS_ground_course)
-				gpsCurrentCourse = frame[i] / 10; // Decidegrees
-		}
+		if (i == log->gpsFieldIndexes.GPS_ground_course)
+			gpsCurrentCourse = frame[i] / 10; // Decidegrees
 
 		if (needComma)
             fprintf(file, ", ");
@@ -656,8 +682,7 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
                     fprintf(file, "%" PRId64, frame[i]);
                 } else if (options.unitGPSSpeed == UNIT_METERS_PER_SECOND) {
                     fprintf(file, "%" PRId64 ".%02u", frame[i] / 100, (unsigned) (llabs(frame[i]) % 100));
-					if (options.dashWare)
-						gpsSpdCmPerSecond = frame[i];						
+					gpsSpdCmPerSecond = frame[i];						
                 } else {
                     fprintf(file, "%.2f", convertMetersPerSecondToUnit(frame[i] / 100.0, options.unitGPSSpeed));
                 }
@@ -672,12 +697,8 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
     }
 
 
-	// Adding Dashware fields
-	if (options.dashWare) {
-		// rssi (%)
-		fprintf(file, ", %" PRId64, rssiPercent);
-		// Throttle (%)
-		fprintf(file, ", %" PRId64, throttlePercent);
+	// Adding information overlay fields (i.e. Dashware)
+	if (options.mergeGPS) {
 
 		// Check if home point coordinates has changed by A LOT since the last iteration. It indicates a bogus frame
 		if ( (log->sysConfig.gpsHomeLatitude ) < (gpsHomeLat - 100000) || (log->sysConfig.gpsHomeLatitude) > (gpsHomeLat + 100000 ) 
@@ -779,7 +800,15 @@ void outputSlowFrameFields(flightLog_t *log, int64_t *frame)
             needComma = true;
         }
 
-        if ((i == log->slowFieldIndexes.flightModeFlags || i == log->slowFieldIndexes.stateFlags)
+		if (i == log->slowFieldIndexes.flightModeFlags && options.unitFlags == UNIT_FLAGS) {
+			flightModeFlags = frame[i];
+		}
+
+		if (i == log->slowFieldIndexes.failsafePhase && options.unitFlags == UNIT_FLAGS) {
+			failsafeFlags = frame[i];
+		}
+		
+		if ((i == log->slowFieldIndexes.flightModeFlags || i == log->slowFieldIndexes.stateFlags)
                 && options.unitFlags == UNIT_FLAGS) {
 
             if (i == log->slowFieldIndexes.flightModeFlags) {
@@ -819,6 +848,10 @@ void outputMainFrameFields(flightLog_t *log, int64_t frameTime, int64_t *frame)
             needComma = true;
         }
 
+		if (log->mainFieldIndexes.navState == i) {
+			navState = frame[i];
+		}
+
         if (i == FLIGHT_LOG_FIELD_INDEX_TIME) {
             // Use the time the caller provided instead of the time in the frame
             if (frameTime == -1) {
@@ -856,6 +889,14 @@ void outputMainFrameFields(flightLog_t *log, int64_t frameTime, int64_t *frame)
 
         outputSlowFrameFields(log, bufferedSlowFrame);
     }
+
+	// Adding Flight Mode
+	flightModeName(csvFile);
+
+	// rssi (%)
+	fprintf(csvFile, ", %" PRId64, rssiPercent);
+	// Throttle (%)
+	fprintf(csvFile, ", %" PRId64, throttlePercent);
 }
 
 void outputMergeFrame(flightLog_t *log)
@@ -1163,14 +1204,17 @@ void writeMainCSVHeader(flightLog_t *log)
         outputFieldNamesHeader(csvFile, &log->frameDefs['S'], slowFieldUnit, false);
     }
 
+	// Add flight mode, rssi (%) and Throttle (%) headers
+	fprintf(csvFile, ", simplifiedMode, rssi (%%), Throttle (%%)");
+
     if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
         fprintf(csvFile, ", ");
 
         outputFieldNamesHeader(csvFile, &log->frameDefs['G'], gpsGFieldUnit, true);
     }
 
-	if (options.dashWare && log->frameDefs['G'].fieldCount > 0) {
-		fprintf(csvFile, ", rssi (%%), Throttle (%%), Distance (m), homeDirection, mAhPerKm, cumulativeTripDistance, azimuth");
+	if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
+		fprintf(csvFile, ", Distance (m), homeDirection, mAhPerKm, cumulativeTripDistance, azimuth");
 	}
 
     fprintf(csvFile, "\n");
@@ -1474,7 +1518,6 @@ void printUsage(const char *argv0)
         "   --limits                 Print the limits and range of each field\n"
         "   --stdout                 Write log to stdout instead of to a file\n"
         "   --datetime               Add a dateTime column with UTC date time\n"
-		"   --dashware               Add some relevant fields for overlay using DashWare (forces --datetime and --merge-gps)\n"
         "   --unit-amperage <unit>   Current meter unit (raw|mA|A), default is A (amps)\n"
         "   --unit-flags <unit>      State flags unit (raw|flags), default is flags\n"
         "   --unit-frame-time <unit> Frame timestamp unit (us|s), default is us (microseconds)\n"
@@ -1538,7 +1581,6 @@ void parseCommandlineOptions(int argc, char **argv)
             {"stdout", no_argument, &options.toStdout, 1},
             { "merge-gps", no_argument, &options.mergeGPS, 1 },
             { "datetime", no_argument, &options.datetime, 1 },
-			{"dashware", no_argument, &options.dashWare, 1 },
             {"simulate-imu", no_argument, &options.simulateIMU, 1},
             {"simulate-current-meter", no_argument, &options.simulateCurrentMeter, 1},
             {"imu-ignore-mag", no_argument, &options.imuIgnoreMag, 1},
@@ -1665,12 +1707,6 @@ int main(int argc, char **argv)
     platform_init();
 
     parseCommandlineOptions(argc, argv);
-
-	if (options.dashWare)
-	{
-		options.datetime = 1;
-		options.mergeGPS = 1;
-	}
 
     if (options.help || argc == 1) {
         printUsage(argv[0]);
