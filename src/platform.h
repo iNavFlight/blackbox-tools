@@ -37,7 +37,9 @@
 #endif
 
 #ifdef WIN32
+# ifndef __MINGW32__
     #define snprintf _snprintf
+#endif
 #endif
 
 typedef struct fileMapping_t {
