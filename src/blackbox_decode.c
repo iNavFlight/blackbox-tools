@@ -629,54 +629,50 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 	// Adding information overlay fields
     if (options.mergeGPS) {
-	bool geoFeasible = (frame[log->gpsFieldIndexes.GPS_numSat] >= MIN_GPS_SATELLITES &&
-                            (fabs(currentLat) <= 90) && fabs(currentLon) <= 180);
+        double range = 0, bearing = 0;
+        int32_t relbearing = 0;
 
-        if (geoFeasible) {
-            if (log->sysConfig.gpsHomeLatitude != 0 && log->sysConfig.gpsHomeLongitude != 0) {
-                double range = 0, bearing = 0;
-                int32_t relbearing = 0;
-                double gpsHomeLat = log->sysConfig.gpsHomeLatitude / 10000000.0;
-                double gpsHomeLon = log->sysConfig.gpsHomeLongitude / 10000000.0;
+        if (log->sysConfig.gpsHomeLatitude != 0 && log->sysConfig.gpsHomeLongitude != 0) {
+            double gpsHomeLat = log->sysConfig.gpsHomeLatitude / 10000000.0;
+            double gpsHomeLon = log->sysConfig.gpsHomeLongitude / 10000000.0;
 
-                if(currentLat != 0 && currentLon != 0) {
+            if(currentLat != 0 && currentLon != 0) {
                     // vehichle relative makes rel bearing easier ...
-                    bearing_distance(currentLat, currentLon, gpsHomeLat, gpsHomeLon, &range, &bearing);
-                    relbearing = lrint(bearing) - currentCourse;
-                    if (relbearing < 0)
-                        relbearing += 360;
-                    if (lastLat == NO_VALID_POS_MARKER) {
-                        lastLat = currentLat;
-                        lastLon = currentLon;
-                    }
+                bearing_distance(currentLat, currentLon, gpsHomeLat, gpsHomeLon, &range, &bearing);
+                relbearing = lrint(bearing) - currentCourse;
+                if (relbearing < 0)
+                    relbearing += 360;
+                if (lastLat == NO_VALID_POS_MARKER) {
+                    lastLat = currentLat;
+                    lastLon = currentLon;
+                }
                     // For people who can't do reciprocals...
-                    bearing = fmod((bearing + 180),360);
+                bearing = fmod((bearing + 180),360);
                     // Every 100ms, check for GPS ground speed and accumulate the travelled distance
-                    int64_t frame_delta = lastFrameTime - lastFrameTripTime;
-                    if (frame_delta > 10000)
-                    {
-                        lastFrameTripTime = lastFrameTime;
-                        if(lastLat != NO_VALID_POS_MARKER) {
-                            double delta,junk;
-                            bearing_distance(lastLat, lastLon, currentLat, currentLon, &delta, &junk);
-                            cumulativeTripDistance += delta;
-                            if(delta > 0) {
+                int64_t frame_delta = lastFrameTime - lastFrameTripTime;
+                if (frame_delta > 10000)
+                {
+                    lastFrameTripTime = lastFrameTime;
+                    if(lastLat != NO_VALID_POS_MARKER) {
+                        double delta,junk;
+                        bearing_distance(lastLat, lastLon, currentLat, currentLon, &delta, &junk);
+                        cumulativeTripDistance += delta;
+                        if(delta > 0) {
 // running average
 //                            mAhPerKm = currentMeterMeasured.energyMilliampHours / (cumulativeTripDistance/1000.0);
-                                if (currentDrawMilliamps >= 0 && gpsSpd > 0)
-                                    mAhPerKm = currentDrawMilliamps / (gpsSpd * 0.036);
-                            }
+                            if (currentDrawMilliamps >= 0 && gpsSpd > 0)
+                                mAhPerKm = currentDrawMilliamps / (gpsSpd * 0.036);
                         }
-                        lastLat = currentLat;
-                        lastLon = currentLon;
                     }
+                    lastLat = currentLat;
+                    lastLon = currentLon;
                 }
-                fprintf(file, ", %.0f", range);
-                fprintf(file, ", %u", relbearing);
-                fprintf(file, ", %u", mAhPerKm);
-                fprintf(file, ", %.0f", cumulativeTripDistance);
-                fprintf(file, ", %.0f",  bearing );
             }
+            fprintf(file, ", %.0f", range);
+            fprintf(file, ", %u", relbearing);
+            fprintf(file, ", %u", mAhPerKm);
+            fprintf(file, ", %.0f", cumulativeTripDistance);
+            fprintf(file, ", %.0f",  bearing );
         }
     }
 }
