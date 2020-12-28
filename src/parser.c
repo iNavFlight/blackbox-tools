@@ -273,6 +273,8 @@ static void identifyGPSFields(flightLog_t *log, flightLogFrameDef_t *frameDef)
 
         if (strcmp(fieldName, "time") == 0) {
             log->gpsFieldIndexes.time = i;
+        } else if (strcmp(fieldName, "GPS_fixType") == 0) {
+            log->gpsFieldIndexes.GPS_fixType = i;
         } else if (strcmp(fieldName, "GPS_numSat") == 0) {
             log->gpsFieldIndexes.GPS_numSat = i;
         } else if (strcmp(fieldName, "GPS_altitude") == 0)  {
@@ -842,16 +844,15 @@ static void parseGPSHomeFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
     {
         int64_t jmplat;
         int64_t jmplon;
-        jmplat = labs(log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]] -
+        jmplat = llabs(log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]] -
                       log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]]);
-        jmplon = labs(log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]] -
+        jmplon = llabs(log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]] -
                       log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]]);
 
-
-#define DEGJMP500M 45000 // 1*7 degrees equating to c. 500m latitude (or equator longitude)
+#define DEGJMP2M 45000 // 1*7 degrees equating to c. 500m latitude (or equator longitude)
             // if you're at at a pole with will divide by 0, possibly the least of your problems.
-        int64_t jmplonlimit = (int64_t) (45000 / cos((M_PI/180.0) * (log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]]/ 10000000.0)));
-        if (jmplat > 45000  || jmplon > jmplonlimit) {
+        int64_t jmplonlimit = (int64_t) (DEGJMP2M / cos((M_PI/180.0) * (log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]]/ 10000000.0)));
+        if (jmplat > DEGJMP2M || jmplon > jmplonlimit) {
             sethome = false;
         }
     }

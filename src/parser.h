@@ -76,6 +76,7 @@ struct flightLogPrivate_t;
  */
 typedef struct gpsGFieldIndexes_t {
     int time;
+    int GPS_fixType;
     int GPS_numSat;
     int GPS_coord[2];
     int GPS_altitude;
