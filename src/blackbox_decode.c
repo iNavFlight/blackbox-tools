@@ -574,6 +574,10 @@ void flightModeName(FILE *file) {
 /**
  * Print the GPS fields from the given GPS frame as comma-separated values (the GPS frame time is not printed).
  */
+
+static double range, bearing;
+static int32_t relbearing;
+
 void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 {
     int i;
@@ -629,14 +633,15 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 	// Adding information overlay fields
     if (options.mergeGPS) {
-        double range = 0, bearing = 0;
-        int32_t relbearing = 0;
-
         if (log->sysConfig.gpsHomeLatitude != 0 && log->sysConfig.gpsHomeLongitude != 0) {
             double gpsHomeLat = log->sysConfig.gpsHomeLatitude / 10000000.0;
             double gpsHomeLon = log->sysConfig.gpsHomeLongitude / 10000000.0;
+            uint8_t fix_type = 0;
 
-            if(currentLat != 0 && currentLon != 0) {
+            if (log->gpsFieldIndexes.GPS_fixType != -1)
+                fix_type = frame[log->gpsFieldIndexes.GPS_fixType];
+
+            if(currentLat != 0 && currentLon != 0 && fix_type == 2) {
                     // vehichle relative makes rel bearing easier ...
                 bearing_distance(currentLat, currentLon, gpsHomeLat, gpsHomeLon, &range, &bearing);
                 relbearing = lrint(bearing) - currentCourse;

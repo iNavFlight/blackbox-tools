@@ -273,6 +273,8 @@ static void identifyGPSFields(flightLog_t *log, flightLogFrameDef_t *frameDef)
 
         if (strcmp(fieldName, "time") == 0) {
             log->gpsFieldIndexes.time = i;
+        } else if (strcmp(fieldName, "GPS_fixType") == 0) {
+            log->gpsFieldIndexes.GPS_fixType = i;
         } else if (strcmp(fieldName, "GPS_numSat") == 0) {
             log->gpsFieldIndexes.GPS_numSat = i;
         } else if (strcmp(fieldName, "GPS_altitude") == 0)  {
