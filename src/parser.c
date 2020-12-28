@@ -847,7 +847,7 @@ static void parseGPSHomeFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
         jmplon = llabs(log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]] -
                       log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]]);
 
-#define DEGJMP2M 450000 // 1*7 degrees equating to c. 5000m latitude (or equator longitude)
+#define DEGJMP2M 45000 // 1*7 degrees equating to c. 500m latitude (or equator longitude)
             // if you're at at a pole with will divide by 0, possibly the least of your problems.
         int64_t jmplonlimit = (int64_t) (DEGJMP2M / cos((M_PI/180.0) * (log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]]/ 10000000.0)));
         if (jmplat > DEGJMP2M || jmplon > jmplonlimit) {
