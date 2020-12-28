@@ -673,12 +673,12 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
                     lastLon = currentLon;
                 }
             }
-            fprintf(file, ", %.0f", range);
-            fprintf(file, ", %u", relbearing);
-            fprintf(file, ", %u", mAhPerKm);
-            fprintf(file, ", %.0f", cumulativeTripDistance);
-            fprintf(file, ", %.0f",  bearing );
         }
+        fprintf(file, ", %.0f", range);
+        fprintf(file, ", %u", relbearing);
+        fprintf(file, ", %u", mAhPerKm);
+        fprintf(file, ", %.0f", cumulativeTripDistance);
+        fprintf(file, ", %.0f",  bearing );
     }
 }
 
