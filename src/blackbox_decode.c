@@ -629,13 +629,15 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 	// Adding information overlay fields
     if (options.mergeGPS) {
+        double range = 0, bearing = 0;
+        int32_t relbearing = 0;
+
         if (log->sysConfig.gpsHomeLatitude != 0 && log->sysConfig.gpsHomeLongitude != 0) {
-            double range = 0, bearing = 0;
-            int32_t relbearing = 0;
             double gpsHomeLat = log->sysConfig.gpsHomeLatitude / 10000000.0;
             double gpsHomeLon = log->sysConfig.gpsHomeLongitude / 10000000.0;
 
             if(currentLat != 0 && currentLon != 0) {
+                    // vehichle relative makes rel bearing easier ...
                 bearing_distance(currentLat, currentLon, gpsHomeLat, gpsHomeLon, &range, &bearing);
                 relbearing = lrint(bearing) - currentCourse;
                 if (relbearing < 0)
@@ -644,8 +646,9 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
                     lastLat = currentLat;
                     lastLon = currentLon;
                 }
-
-                // Every 100ms, check for GPS ground speed and accumulate the travelled distance
+                    // For people who can't do reciprocals...
+                bearing = fmod((bearing + 180),360);
+                    // Every 100ms, check for GPS ground speed and accumulate the travelled distance
                 int64_t frame_delta = lastFrameTime - lastFrameTripTime;
                 if (frame_delta > 10000)
                 {
@@ -1132,7 +1135,7 @@ void writeMainCSVHeader(flightLog_t *log)
     }
 
 	if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
-		fprintf(csvFile, ", Distance (m), relative homeDirection, mAhPerKm, cumulativeTripDistance, homeDirection");
+		fprintf(csvFile, ", Distance (m), relative homeDirection, mAhPerKm, cumulativeTripDistance, Azimuth");
 	}
 
     fprintf(csvFile, "\n");
