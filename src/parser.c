@@ -837,29 +837,7 @@ static void parseGPSFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
 
 static void parseGPSHomeFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
 {
-    bool sethome = true;
     parseFrame(log, stream, 'H', log->private->gpsHomeHistory[0], NULL, NULL, 0, raw);
-    if (log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]] != 0 &&
-        log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]] != 0)
-    {
-        int64_t jmplat;
-        int64_t jmplon;
-        jmplat = llabs(log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]] -
-                      log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]]);
-        jmplon = llabs(log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]] -
-                      log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]]);
-
-#define DEGJMP2M 45000 // 1*7 degrees equating to c. 500m latitude (or equator longitude)
-            // if you're at at a pole with will divide by 0, possibly the least of your problems.
-        int64_t jmplonlimit = (int64_t) (DEGJMP2M / cos((M_PI/180.0) * (log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]]/ 10000000.0)));
-        if (jmplat > DEGJMP2M || jmplon > jmplonlimit) {
-            sethome = false;
-        }
-    }
-    if (sethome) {
-        log->sysConfig.gpsHomeLatitude = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]];
-        log->sysConfig.gpsHomeLongitude = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]];
-    }
 }
 
 static void parseSlowFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
@@ -1617,4 +1595,17 @@ void flightLogDestroy(flightLog_t *log)
 
     free(log->private);
     free(log);
+}
+
+bool getHomeCoordinates(flightLog_t *log, double *lat, double *lon)
+{
+    if (log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]] != 0 &&
+        log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]] != 0) {
+        *lat = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]] / 1e7;
+        *lon = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]] / 1e7;
+        return true;
+    } else {
+        *lat = *lon = 0;
+        return false;
+    }
 }

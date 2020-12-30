@@ -97,7 +97,7 @@ typedef struct slowFieldIndexes_t {
 typedef struct mainFieldIndexes_t {
     int loopIteration;
     int time;
-	int navState;
+    int navState;
 
     int pid[3][3]; //First dimension is [P, I, D], second dimension is axis
 
@@ -133,10 +133,6 @@ typedef struct flightLogSysConfig_t {
     uint8_t vbatmaxcellvoltage;
     uint8_t vbatmincellvoltage;
     uint8_t vbatwarningcellvoltage;
-
-	int64_t gpsHomeLatitude;
-	int64_t gpsHomeLongitude;
-
     int16_t currentMeterOffset, currentMeterScale;
 
     uint16_t vbatref;
@@ -203,5 +199,5 @@ void flightlogFailsafePhaseToString(uint8_t failsafePhase, char *dest, int destL
 
 bool flightLogParse(flightLog_t *log, int logIndex, FlightLogMetadataReady onMetadataReady, FlightLogFrameReady onFrameReady, FlightLogEventReady onEvent, bool raw);
 void flightLogDestroy(flightLog_t *log);
-
+bool getHomeCoordinates(flightLog_t *log, double *lat, double *lon);
 #endif
