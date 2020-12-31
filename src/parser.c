@@ -1599,13 +1599,11 @@ void flightLogDestroy(flightLog_t *log)
 
 bool getHomeCoordinates(flightLog_t *log, double *lat, double *lon)
 {
-    if (log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]] != 0 &&
-        log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]] != 0) {
+    if (log->private->gpsHomeIsValid) {
         *lat = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]] / 1e7;
         *lon = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]] / 1e7;
-        return true;
     } else {
         *lat = *lon = 0;
-        return false;
     }
+    return log->private->gpsHomeIsValid;
 }
