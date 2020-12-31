@@ -1368,6 +1368,9 @@ int decodeFlightLog(flightLog_t *log, const char *filename, int logIndex)
             return -1;
         }
 
+        // Request buffering which increases throughput on Windows removable drives
+        setvbuf(csvFile, NULL, _IOFBF, BUFSIZ);
+
         fprintf(stderr, "Decoding log '%s' to '%s'...\n", filename, csvFilename);
         free(csvFilename);
 
