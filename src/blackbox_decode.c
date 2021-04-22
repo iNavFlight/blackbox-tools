@@ -106,7 +106,7 @@ static int64_t bufferedGPSFrame[FLIGHT_LOG_MAX_FIELDS];
 
 static seriesStats_t looptimeStats;
 
-#define ADJUSTMENT_FUNCTION_COUNT 21
+#define ADJUSTMENT_FUNCTION_COUNT 57
 static char *INFLIGHT_ADJUSTMENT_FUNCTIONS[ADJUSTMENT_FUNCTION_COUNT] = {
         "NONE",
         "RC_RATE",
@@ -128,7 +128,43 @@ static char *INFLIGHT_ADJUSTMENT_FUNCTIONS[ADJUSTMENT_FUNCTION_COUNT] = {
         "PITCH_D",
         "ROLL_P",
         "ROLL_I",
-        "ROLL_D"};
+        "ROLL_D"
+        "RATE_PROFILE",
+        "PITCH_RATE",
+        "ROLL_RATE",
+        "RC_YAW_EXPO",
+        "MANUAL_RC_EXPO",
+        "MANUAL_RC_YAW_EXPO",
+        "MANUAL_PITCH_ROLL_RATE",
+        "MANUAL_ROLL_RATE",
+        "MANUAL_PITCH_RATE",
+        "MANUAL_YAW_RATE",
+        "NAV_FW_CRUISE_THR",
+        "NAV_FW_PITCH2THR",
+        "ROLL_BOARD_ALIGNMENT",
+        "PITCH_BOARD_ALIGNMENT",
+        "LEVEL_P",
+        "LEVEL_I",
+        "LEVEL_D",
+        "POS_XY_P",
+        "POS_XY_I",
+        "POS_XY_D",
+        "POS_Z_P",
+        "POS_Z_I",
+        "POS_Z_D",
+        "HEADING_P",
+        "VEL_XY_P",
+        "VEL_XY_I",
+        "VEL_XY_D",
+        "VEL_Z_P",
+        "VEL_Z_I",
+        "VEL_Z_D",
+        "FW_MIN_THROTTLE_DOWN_PITCH_ANGLE",
+        "VTX_POWER_LEVEL",
+        "TPA",
+        "TPA_BREAKPOINT",
+        "NAV_FW_CONTROL_SMOOTHNESS"
+};
 
 static void fprintfMilliampsInUnit(FILE *file, int32_t milliamps, Unit unit)
 {
@@ -341,14 +377,26 @@ void onEvent(flightLog_t *log, flightLogEvent_t *event)
                 event->data.gtuneCycleResult.newP);
         break;
         case FLIGHT_LOG_EVENT_INFLIGHT_ADJUSTMENT:
-            fprintf(eventFile, "{\"name\":\"Inflight adjustment\", \"time\":%" PRId64 ", \"data\":{\"adjustmentFunction\":\"%s\",\"value\":", lastFrameTime,
-                    INFLIGHT_ADJUSTMENT_FUNCTIONS[event->data.inflightAdjustment.adjustmentFunction & 127]);
+        {
+
+            char tmpbuf[128];
+            char *adjType;
+            unsigned int fltadj = event->data.inflightAdjustment.adjustmentFunction & 127;
+            if (fltadj >= ADJUSTMENT_FUNCTION_COUNT) {
+                sprintf(tmpbuf, "unknown %d", fltadj);
+                adjType = tmpbuf;
+            } else {
+                adjType = INFLIGHT_ADJUSTMENT_FUNCTIONS[event->data.inflightAdjustment.adjustmentFunction & 127];
+            }
+            fprintf(eventFile, "{\"name\":\"Inflight adjustment\", \"time\":%" PRId64 ", \"data\":{\"adjustmentFunction\":\"%s\",\"value\":", lastFrameTime, adjType);
             if (event->data.inflightAdjustment.adjustmentFunction > 127) {
                 fprintf(eventFile, "%g", event->data.inflightAdjustment.newFloatValue);
             } else {
                 fprintf(eventFile, "%d", event->data.inflightAdjustment.newValue);
             }
             fprintf(eventFile, "}}\n");
+        }
+
         break;
         case FLIGHT_LOG_EVENT_LOGGING_RESUME:
             fprintf(eventFile, "{\"name\":\"Logging resume\", \"time\":%" PRId64 ", \"data\":{\"logIteration\":%d}}\n", event->data.loggingResume.currentTime,
