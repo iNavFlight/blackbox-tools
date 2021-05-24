@@ -61,6 +61,7 @@ else
 OPTIMIZE	 = -O3
 LTO_FLAGS	 = -flto $(OPTIMIZE)
 DEBUG_FLAGS =
+LDFLAGS += -flto # required for clang LTO linking
 endif
 
 # Setting ARCH_FLAGS=-m32 permits building on Linux x86_64 for ia32 ..
