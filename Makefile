@@ -18,6 +18,8 @@
 OPTIONS		?=
 BLACKBOX_VERSION     ?=
 
+prefix ?= /usr/local
+
 # Debugger optons, must be empty or GDB
 DEBUG =
 
@@ -141,3 +143,10 @@ help:
 	@echo "Usage:"
 	@echo "        make [OPTIONS=\"<options>\"]"
 	@echo ""
+
+install: $(DECODER_ELF) $(RENDERER_ELF)
+	install -d $(prefix)/bin
+	install -s -m 644  $(DECODER_ELF) $(RENDERER_ELF) $(prefix)/bin/
+
+uninstall:
+	rm -f $(prefix)/bin/blackbox_decoder  $(prefix)/bin/blackbox_render
