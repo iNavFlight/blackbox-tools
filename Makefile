@@ -146,7 +146,7 @@ help:
 
 install: $(DECODER_ELF) $(RENDERER_ELF)
 	install -d $(prefix)/bin
-	install -s -m 644  $(DECODER_ELF) $(RENDERER_ELF) $(prefix)/bin/
+	install -s -m 755  $(DECODER_ELF) $(RENDERER_ELF) $(prefix)/bin/
 
 uninstall:
-	rm -f $(prefix)/bin/blackbox_decoder  $(prefix)/bin/blackbox_render
+	rm -f $(prefix)/bin/blackbox_decode  $(prefix)/bin/blackbox_render
