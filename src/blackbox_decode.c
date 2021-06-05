@@ -108,62 +108,63 @@ static seriesStats_t looptimeStats;
 
 #define ADJUSTMENT_FUNCTION_COUNT 57
 static char *INFLIGHT_ADJUSTMENT_FUNCTIONS[ADJUSTMENT_FUNCTION_COUNT] = {
-        "NONE",
-        "RC_RATE",
-        "RC_EXPO",
-        "THROTTLE_EXPO",
-        "PITCH_ROLL_RATE",
-        "YAW_RATE",
-        "PITCH_ROLL_P",
-        "PITCH_ROLL_I",
-        "PITCH_ROLL_D",
-        "YAW_P",
-        "YAW_I",
-        "YAW_D",
-        "RATE_PROFILE",
-        "PITCH_RATE",
-        "ROLL_RATE",
-        "PITCH_P",
-        "PITCH_I",
-        "PITCH_D",
-        "ROLL_P",
-        "ROLL_I",
-        "ROLL_D"
-        "RATE_PROFILE",
-        "PITCH_RATE",
-        "ROLL_RATE",
-        "RC_YAW_EXPO",
-        "MANUAL_RC_EXPO",
-        "MANUAL_RC_YAW_EXPO",
-        "MANUAL_PITCH_ROLL_RATE",
-        "MANUAL_ROLL_RATE",
-        "MANUAL_PITCH_RATE",
-        "MANUAL_YAW_RATE",
-        "NAV_FW_CRUISE_THR",
-        "NAV_FW_PITCH2THR",
-        "ROLL_BOARD_ALIGNMENT",
-        "PITCH_BOARD_ALIGNMENT",
-        "LEVEL_P",
-        "LEVEL_I",
-        "LEVEL_D",
-        "POS_XY_P",
-        "POS_XY_I",
-        "POS_XY_D",
-        "POS_Z_P",
-        "POS_Z_I",
-        "POS_Z_D",
-        "HEADING_P",
-        "VEL_XY_P",
-        "VEL_XY_I",
-        "VEL_XY_D",
-        "VEL_Z_P",
-        "VEL_Z_I",
-        "VEL_Z_D",
-        "FW_MIN_THROTTLE_DOWN_PITCH_ANGLE",
-        "VTX_POWER_LEVEL",
-        "TPA",
-        "TPA_BREAKPOINT",
-        "NAV_FW_CONTROL_SMOOTHNESS"
+    "NONE",	// 0
+    "RC_RATE",	// 1
+    "RC_EXPO",	// 2
+    "THROTTLE_EXPO",	// 3
+    "PITCH_ROLL_RATE",	// 4
+    "YAW_RATE",	// 5
+    "PITCH_ROLL_P",	// 6
+    "PITCH_ROLL_I",	// 7
+    "PITCH_ROLL_D",	// 8
+    "PITCH_ROLL_FF",	// 9
+    "PITCH_P",	// 10
+    "PITCH_I",	// 11
+    "PITCH_D",	// 12
+    "PITCH_FF",	// 13
+    "ROLL_P",	// 14
+    "ROLL_I",	// 15
+    "ROLL_D",	// 16
+    "ROLL_FF",	// 17
+    "YAW_P",	// 18
+    "YAW_I",	// 19
+    "YAW_D",	// 20
+    "YAW_FF",	// 21
+    "RATE_PROFILE",	// 22
+    "PITCH_RATE",	// 23
+    "ROLL_RATE",	// 24
+    "RC_YAW_EXPO",	// 25
+    "MANUAL_RC_EXPO",	// 26
+    "MANUAL_RC_YAW_EXPO",	// 27
+    "MANUAL_PITCH_ROLL_RATE",	// 28
+    "MANUAL_ROLL_RATE",	// 29
+    "MANUAL_PITCH_RATE",	// 30
+    "MANUAL_YAW_RATE",	// 31
+    "NAV_FW_CRUISE_THR",	// 32
+    "NAV_FW_PITCH2THR",	// 33
+    "ROLL_BOARD_ALIGNMENT",	// 34
+    "PITCH_BOARD_ALIGNMENT",	// 35
+    "LEVEL_P",	// 36
+    "LEVEL_I",	// 37
+    "LEVEL_D",	// 38
+    "POS_XY_P",	// 39
+    "POS_XY_I",	// 40
+    "POS_XY_D",	// 41
+    "POS_Z_P",	// 42
+    "POS_Z_I",	// 43
+    "POS_Z_D",	// 44
+    "HEADING_P",	// 45
+    "VEL_XY_P",	// 46
+    "VEL_XY_I",	// 47
+    "VEL_XY_D",	// 48
+    "VEL_Z_P",	// 49
+    "VEL_Z_I",	// 50
+    "VEL_Z_D",	// 51
+    "FW_MIN_THROTTLE_DOWN_PITCH_ANGLE",	// 52
+    "VTX_POWER_LEVEL",	// 53
+    "TPA",	// 54
+    "TPA_BREAKPOINT",	// 55
+    "NAV_FW_CONTROL_SMOOTHNESS",	// 56
 };
 
 static void fprintfMilliampsInUnit(FILE *file, int32_t milliamps, Unit unit)
