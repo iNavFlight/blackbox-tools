@@ -1139,6 +1139,19 @@ void printStats(flightLog_t *log, int logIndex, bool raw, bool limits)
         }
     }
 
+    if(log->sysConfig.metafound != ((1<<META_CHECKS_COUNT) - 1)) {
+        fprintf(stderr,"\nWARNING: Missing expected metadata - check for log corruption\n");
+        if((log->sysConfig.metafound & (1<<haveMetaVBatRef)) == 0)
+            fprintf(stderr,"\tWarning: No VBAT reference\n");
+        if((log->sysConfig.metafound&(1<<haveMetaFWType)) == 0)
+            fprintf(stderr,"\tError: No Firmware type metadata\n");
+        if((log->sysConfig.metafound&(1<<haveMetaFWRev)) == 0)
+            fprintf(stderr,"\tError: No Firmware revision metadata\n");
+        if((log->sysConfig.metafound&(1<<haveMetaPInterval)) == 0)
+            fprintf(stderr,"\tError: No P Interval\n");
+        if((log->sysConfig.metafound&(1<<haveMetaAcc1G)) == 0)
+            fprintf(stderr,"\tError: No Acc.1G metadata\n");
+    }
     fprintf(stderr, "\n");
 }
 

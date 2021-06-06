@@ -3,7 +3,9 @@
 ## Generate enum names from f/w source code to avoid mismatch between
 ## firmware and bbl decoder
 ## BOXes from src/main/fc/rc_modes.h
-## ADJUSTMENTs from ./src/main/fc/rc_adjustments.h
+## ADJUSTMENTs from src/main/fc/rc_adjustments.h
+
+NAMES=['BOX','ADJUSTMENT_']
 
 inenum = false
 n = 0
@@ -16,10 +18,10 @@ ARGF.each do |l|
       a = l.split(' ')
       if a.size > 2
         name=nil
-        if a[0].match(/^ADJUSTMENT_/)
-          name = a[0].sub(/^ADJUSTMENT_/,'')
-        elsif a[0].match(/^BOX/)
-          name = a[0].sub(/^BOX_/,'')
+        NAMES.each do |nm|
+          if a[0].match(/^#{nm}/)
+            name = a[0].sub(/^#{nm}/,'')
+          end
         end
         puts "    \"#{name}\",\t// #{n}"
         n += 1

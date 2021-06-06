@@ -36,6 +36,16 @@ typedef enum VbatType {
     INAV_V2
 } VbatType;
 
+// These items have existed since pre 1.0
+typedef enum ParserMetaData {
+    haveMetaVBatRef = 0,
+    haveMetaFWType,
+    haveMetaFWRev,
+    haveMetaPInterval,
+    haveMetaAcc1G,
+    META_CHECKS_COUNT
+} ParserMetaData;
+
 typedef struct flightLogFrameStatistics_t {
     uint32_t bytes;
     // Frames decoded to the right length and had reasonable data in them:
@@ -143,6 +153,7 @@ typedef struct flightLogSysConfig_t {
     VbatType vbatType;
 
     struct tm logStartTime;
+    ParserMetaData metafound;
 } flightLogSysConfig_t;
 
 typedef struct flightLogFrameDef_t {
