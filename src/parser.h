@@ -154,7 +154,6 @@ typedef struct flightLogSysConfig_t {
 
     struct tm logStartTime;
     ParserMetaData metafound;
-
 } flightLogSysConfig_t;
 
 typedef struct flightLogFrameDef_t {

@@ -1019,6 +1019,7 @@ void onMetadataReady(flightLog_t *log)
 
     identifyGPSFields(log);
     applyFieldUnits(log);
+
     writeMainCSVHeader(log);
 }
 

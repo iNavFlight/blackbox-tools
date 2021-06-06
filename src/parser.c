@@ -81,7 +81,6 @@ typedef struct flightLogPrivate_t
     FlightLogEventReady onEvent;
 
     mmapStream_t *stream;
-
 } flightLogPrivate_t;
 
 typedef void (*FlightLogFrameParse)(flightLog_t *log, mmapStream_t *stream, bool raw);
@@ -434,7 +433,6 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
         log->private->dataVersion = atoi(fieldValue);
     } else if (strcmp(fieldName, "Firmware type") == 0) {
         log->sysConfig.metafound |= (1 << haveMetaFWType);
-
         if (strcmp(fieldValue, "Cleanflight") == 0)
             log->sysConfig.firmwareType = FIRMWARE_TYPE_CLEANFLIGHT;
         else
@@ -455,7 +453,6 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
         log->sysConfig.vbatscale = atoi(fieldValue);
     } else if (strcmp(fieldName, "vbatref") == 0) {
         log->sysConfig.metafound |= (1 << haveMetaVBatRef);
-
         log->sysConfig.vbatref = atoi(fieldValue);
     } else if (strcmp(fieldName, "vbatcellvoltage") == 0) {
         int vbatcellvoltage[3];
