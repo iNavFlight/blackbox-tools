@@ -28,6 +28,7 @@
 #define LOG_START_MARKER "H Product:Blackbox flight data recorder by Nicholas Sherlock\n"
 
 #define HEADER_MAX_SIZE 2048
+// maximum size of a single header line (not the whole section)
 
 //Assume that even in the most woeful logging situation, we won't miss 10 seconds of frames
 #define MAXIMUM_TIME_JUMP_BETWEEN_FRAMES (10 * 1000000)
@@ -80,6 +81,7 @@ typedef struct flightLogPrivate_t
     FlightLogEventReady onEvent;
 
     mmapStream_t *stream;
+
 } flightLogPrivate_t;
 
 typedef void (*FlightLogFrameParse)(flightLog_t *log, mmapStream_t *stream, bool raw);
@@ -421,6 +423,7 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
         if (log->frameIntervalI < 1)
             log->frameIntervalI = 1;
     } else if (strcmp(fieldName, "P interval") == 0) {
+        log->sysConfig.metafound |= (1 << haveMetaPInterval);
         char *slashPos = strchr(fieldValue, '/');
 
         if (slashPos) {
@@ -430,6 +433,8 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
     } else if (strcmp(fieldName, "Data version") == 0) {
         log->private->dataVersion = atoi(fieldValue);
     } else if (strcmp(fieldName, "Firmware type") == 0) {
+        log->sysConfig.metafound |= (1 << haveMetaFWType);
+
         if (strcmp(fieldValue, "Cleanflight") == 0)
             log->sysConfig.firmwareType = FIRMWARE_TYPE_CLEANFLIGHT;
         else
@@ -449,6 +454,8 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
     } else if (strcmp(fieldName, "vbatscale") == 0) {
         log->sysConfig.vbatscale = atoi(fieldValue);
     } else if (strcmp(fieldName, "vbatref") == 0) {
+        log->sysConfig.metafound |= (1 << haveMetaVBatRef);
+
         log->sysConfig.vbatref = atoi(fieldValue);
     } else if (strcmp(fieldName, "vbatcellvoltage") == 0) {
         int vbatcellvoltage[3];
@@ -477,6 +484,7 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
             log->sysConfig.gyroScale = (float) (log->sysConfig.gyroScale * (M_PI / 180.0) * 0.000001);
         }
     } else if (strcmp(fieldName, "acc_1G") == 0) {
+        log->sysConfig.metafound |= (1 << haveMetaAcc1G);
         log->sysConfig.acc_1G = atoi(fieldValue);
     } else if (strcmp(fieldName, "motorOutput") == 0) {
     	int motorOutputs[2];
@@ -486,6 +494,7 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
 		log->sysConfig.motorOutputLow = motorOutputs[0];
 		log->sysConfig.motorOutputHigh = motorOutputs[1];
     } else if (strcmp(fieldName, "Firmware revision") == 0) {
+        log->sysConfig.metafound |= (1 << haveMetaFWRev);
 
         if (strncmp(fieldValue, "Betaflight", 10) == 0)
             log->sysConfig.firmwareRevison = FIRMWARE_REVISON_BETAFLIGHT;
