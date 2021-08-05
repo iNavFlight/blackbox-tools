@@ -33,6 +33,8 @@
 #include "units.h"
 #include "stats.h"
 
+#define CSV_SEP ","
+
 #define MIN_GPS_SATELLITES 5
 
 typedef struct decodeOptions_t {
@@ -316,9 +318,9 @@ static bool fprintfMainFieldInUnit(flightLog_t *log, FILE *file, int fieldIndex,
         break;
         case UNIT_RAW:
             if (log->frameDefs['I'].fieldSigned[fieldIndex] || options.raw) {
-                fprintf(file, "%3d", (int32_t) fieldValue);
+                fprintf(file, "%d", (int32_t) fieldValue);
             } else {
-                fprintf(file, "%3u", (uint32_t) fieldValue);
+                fprintf(file, "%u", (uint32_t) fieldValue);
             }
             return true;
         break;
@@ -425,7 +427,7 @@ void outputFieldNamesHeader(FILE *file, flightLogFrameDef_t *frame, Unit *fieldU
             continue;
 
         if (needComma) {
-            fprintf(file, ", ");
+            fprintf(file, CSV_SEP);
         } else {
             needComma = true;
         }
@@ -529,7 +531,7 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 
         if (needComma)
-            fprintf(file, ", ");
+            fprintf(file, CSV_SEP);
         else
             needComma = true;
 
@@ -560,7 +562,11 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
     {
         double hlat, hlon;
         getHomeCoordinates(log, &hlat, &hlon);
-        fprintf(file, ", %.7f, %.7f", hlat, hlon);
+        if (needComma)
+            fprintf(file, CSV_SEP);
+        else
+            needComma = true;
+        fprintf(file, "%.7f" CSV_SEP "%.7f", hlat, hlon);
     }
 
 }
@@ -589,7 +595,7 @@ void outputGPSFrame(flightLog_t *log, int64_t *frame)
 
     if (gpsCsvFile) {
         fprintfMicrosecondsInUnit(log, gpsCsvFile, gpsFrameTime, options.unitFrameTime);
-        fprintf(gpsCsvFile, ", ");
+        fprintf(gpsCsvFile, CSV_SEP);
 
         outputGPSFields(log, gpsCsvFile, frame);
 
@@ -608,7 +614,7 @@ void outputSlowFrameFields(flightLog_t *log, int64_t *frame)
 
     for (int i = 0; i < log->frameDefs['S'].fieldCount; i++) {
         if (needComma) {
-            fprintf(csvFile, ", ");
+            fprintf(csvFile, CSV_SEP);
         } else {
             needComma = true;
         }
@@ -648,7 +654,7 @@ void outputMainFrameFields(flightLog_t *log, int64_t frameTime, int64_t *frame)
 
     for (i = 0; i < log->frameDefs['I'].fieldCount; i++) {
         if (needComma) {
-            fprintf(csvFile, ", ");
+            fprintf(csvFile, CSV_SEP);
         } else {
             needComma = true;
         }
@@ -668,26 +674,23 @@ void outputMainFrameFields(flightLog_t *log, int64_t frameTime, int64_t *frame)
     }
 
     if (options.simulateIMU) {
-        fprintf(csvFile, ", %.2f, %.2f, %.2f", attitude.roll * 180 / M_PI, attitude.pitch * 180 / M_PI, attitude.heading * 180 / M_PI);
+        fprintf(csvFile, CSV_SEP "%.2f,%.2f,%.2f", attitude.roll * 180 / M_PI, attitude.pitch * 180 / M_PI, attitude.heading * 180 / M_PI);
     }
 
     if (log->mainFieldIndexes.amperageLatest != -1) {
         // Integrate the ADC's current measurements to get cumulative energy usage
-        fprintf(csvFile, ", %d", (int) round(currentMeterMeasured.energyMilliampHours));
+        fprintf(csvFile, CSV_SEP "%d", (int) round(currentMeterMeasured.energyMilliampHours));
     }
 
     if (options.simulateCurrentMeter) {
-        fprintf(csvFile, ", ");
-
+        fprintf(csvFile, CSV_SEP);
         fprintfMilliampsInUnit(csvFile, currentMeterVirtual.currentMilliamps, options.unitAmperage);
-
-        fprintf(csvFile, ", %d", (int) round(currentMeterVirtual.energyMilliampHours));
+        fprintf(csvFile, CSV_SEP "%d", (int) round(currentMeterVirtual.energyMilliampHours));
     }
 
     // Do we have a slow frame to print out too?
     if (log->frameDefs['S'].fieldCount > 0) {
-        fprintf(csvFile, ", ");
-
+        fprintf(csvFile, CSV_SEP);
         outputSlowFrameFields(log, bufferedSlowFrame);
     }
 
@@ -696,7 +699,7 @@ void outputMainFrameFields(flightLog_t *log, int64_t frameTime, int64_t *frame)
 void outputMergeFrame(flightLog_t *log)
 {
     outputMainFrameFields(log, bufferedFrameTime, bufferedMainFrame);
-    fprintf(csvFile, ", ");
+    fprintf(csvFile, CSV_SEP);
     outputGPSFields(log, csvFile, bufferedGPSFrame);
     fprintf(csvFile, "\n");
 
@@ -848,7 +851,7 @@ void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t fra
                 outputMainFrameFields(log, frameValid ? frame[FLIGHT_LOG_FIELD_INDEX_TIME] : -1, frame);
 
                 if (options.debug) {
-                    fprintf(csvFile, ", %c, offset %d, size %d\n", (char) frameType, frameOffset, frameSize);
+                    fprintf(csvFile, CSV_SEP "%c, offset %d, size %d\n", (char) frameType, frameOffset, frameSize);
                 } else {
                     fprintf(csvFile, "\n");
 				}
@@ -967,7 +970,7 @@ void writeMainCSVHeader(flightLog_t *log)
 
     for (i = 0; i < log->frameDefs['I'].fieldCount; i++) {
         if (i > 0)
-            fprintf(csvFile, ", ");
+            fprintf(csvFile, CSV_SEP);
 
         fprintf(csvFile, "%s", log->frameDefs['I'].fieldName[i]);
 
@@ -976,33 +979,33 @@ void writeMainCSVHeader(flightLog_t *log)
         }
 
         if (options.datetime && strcmp(log->frameDefs['I'].fieldName[i], "time") == 0) {
-            fprintf(csvFile, ", dateTime");
+            fprintf(csvFile, CSV_SEP "dateTime");
         }
     }
 
     if (options.simulateIMU) {
-        fprintf(csvFile, ", roll, pitch, heading");
+        fprintf(csvFile, CSV_SEP "roll" CSV_SEP "pitch" CSV_SEP "heading");
     }
 
     if (log->mainFieldIndexes.amperageLatest != -1) {
-        fprintf(csvFile, ", energyCumulative (mAh)");
+        fprintf(csvFile, CSV_SEP "energyCumulative (mAh)");
     }
 
     if (options.simulateCurrentMeter) {
-        fprintf(csvFile, ", currentVirtual (%s), energyCumulativeVirtual (mAh)", UNIT_NAME[options.unitAmperage]);
+        fprintf(csvFile, CSV_SEP "currentVirtual (%s)" CSV_SEP "energyCumulativeVirtual (mAh)", UNIT_NAME[options.unitAmperage]);
     }
 
     if (log->frameDefs['S'].fieldCount > 0) {
-        fprintf(csvFile, ", ");
+        fprintf(csvFile, CSV_SEP);
 
         outputFieldNamesHeader(csvFile, &log->frameDefs['S'], slowFieldUnit, false);
     }
 
     if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
-        fprintf(csvFile, ", ");
+        fprintf(csvFile, CSV_SEP);
 
         outputFieldNamesHeader(csvFile, &log->frameDefs['G'], gpsGFieldUnit, true);
-        fprintf(csvFile, ", GPS_home_lat, GPS_home_lon");
+        fprintf(csvFile, CSV_SEP "GPS_home_lat" CSV_SEP "GPS_home_lon");
     }
     fprintf(csvFile, "\n");
 }
