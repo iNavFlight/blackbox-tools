@@ -29,10 +29,10 @@
     DWORD WINAPI win32ThreadFuncUnwrap(LPVOID data)
     {
         win32ThreadFuncWrapper_t *unwrapped = (win32ThreadFuncWrapper_t*)data;
-        DWORD result;
+        DWORD result = 0;
 
         //Call the original thread routine with the original data and return that as our result
-        result = (DWORD) (unwrapped->threadFunc(unwrapped->data));
+        /*result = (DWORD)*/ (unwrapped->threadFunc(unwrapped->data));
 
         free(unwrapped);
 
