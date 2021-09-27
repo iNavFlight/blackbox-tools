@@ -1,5 +1,4 @@
 #include <stdint.h>
-
 #include "battery.h"
 
 #define SECONDS_PER_HOUR 3600u
@@ -15,7 +14,6 @@
 void currentMeterInit(currentMeterState_t *state)
 {
     state->lastTime = 0;
-
     state->energyMilliampHours = 0;
     state->currentMilliamps = 0;
 }
@@ -25,7 +23,7 @@ void currentMeterInit(currentMeterState_t *state)
  *
  * Time is an absolute time in micro-seconds (not a delta).
  */
-void currentMeterUpdateVirtual(currentMeterState_t *state, int16_t currentMeterOffset, int16_t currentMeterScale, uint32_t throttle, uint32_t time)
+void currentMeterUpdateVirtual(currentMeterState_t *state, int16_t currentMeterOffset, int16_t currentMeterScale, uint32_t throttle, uint64_t time)
 {
     int32_t throttleOffset, throttleFactor;
 
@@ -45,13 +43,12 @@ void currentMeterUpdateVirtual(currentMeterState_t *state, int16_t currentMeterO
     state->lastTime = time;
 }
 
-void currentMeterUpdateMeasured(currentMeterState_t *state, int16_t amperageMilliamps, uint32_t time)
+void currentMeterUpdateMeasured(currentMeterState_t *state, int amperageMilliamps, uint64_t time)
 {
     state->currentMilliamps = amperageMilliamps;
 
     if (state->lastTime != 0) {
          state->energyMilliampHours += ((double) state->currentMilliamps * (time - state->lastTime)) / MICROSECONDS_PER_HOUR;
     }
-
     state->lastTime = time;
 }
