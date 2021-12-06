@@ -107,6 +107,8 @@ const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[] = {
     "TURTLE",	// 43
     "NAVCRUISE",	// 44
     "AUTOLEVEL",	// 45
+    "PLANWPMISSION",	// 46,
+    "SOARING",	// 47,
     NULL
 };
 
