@@ -23,7 +23,8 @@ If your log file contains GPS data then a ".gpx" file will also be produced. Thi
 Use the `--help` option to show more details:
 
 ```text
-Blackbox flight log decoder by Nicholas Sherlock
+blackbox_decode --help
+Blackbox flight log decoder by Nicholas Sherlock (vX.Y.Z, MMM DD YYYY hh:mm:ss)
 
 Usage:
      blackbox_decode [options] <input logs>
@@ -34,7 +35,6 @@ Options:
    --limits                 Print the limits and range of each field
    --stdout                 Write log to stdout instead of to a file
    --datetime               Add a dateTime column with UTC date time
-   --dashware               Add some relevant fields for overlay using DashWare (forces --datetime and --merge-gps)
    --unit-amperage <unit>   Current meter unit (raw|mA|A), default is A (amps)
    --unit-flags <unit>      State flags unit (raw|flags), default is flags
    --unit-frame-time <unit> Frame timestamp unit (us|s), default is us (microseconds)
@@ -124,15 +124,29 @@ The `blackbox_decode` tool for turning binary flight logs into CSV doesn't depen
 
 The `blackbox_render` tool renders a binary flight log into a series of PNG images which you can overlay on your flight video. Please read the section below that most closely matches your operating system for instructions on getting the `libcairo` library required to build the `blackbox_render` tool.
 
-#### Ubuntu
-You can get the tools required for building by entering these commands into the terminal:
+#### Linux
+
+You will need `gcc` (or `clang`), `make` and `libcairo2` (development files).
+
+For Debian (Ubuntu etc.), you can get the tools required for building by entering these commands into the terminal:
 
 ```bash
 sudo apt-get update
 sudo apt-get install make gcc libcairo2-dev
 ```
+Otherwise, search the distro package manager and install equivalents.
 
-Build blackbox_render by running `make obj/blackbox_render` (or build both tools by just running `make`).
+Then, build blackbox_render by running `make obj/blackbox_render` (or build both tools by just running `make`).
+
+#### FreeBSD
+
+You will need `clang` (`cc`), `gmake` and `libcairo2`. Use `pkg` to install.
+
+Then:
+
+```
+gmake
+```
 
 #### MacOSX
 The easiest way to build is to install the [Xcode development tool][], then install an environment like [Homebrew][] or [MacPorts][] onto your system.
@@ -164,8 +178,13 @@ $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/opt/X11/lib/pkgconfig
 [Homebrew]: http://brew.sh/
 [MacPorts]: https://www.macports.org/
 
-#### Windows
-The tools can be built with Visual Studio Express 2013, just open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable.
+Macos `blacbox_decode` can also be cross-compiled on Linux using the supplied `Makefile`.
+
+#### Windows (Win32)
+
+Historically, the tools can be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable.
+
+The tools can also be cross-compiled on Linux (Win32 `blackbox_decode` and `blackbox_render`, Win64 `blackbox_decode`) using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64).
 
 ## License
 
@@ -174,19 +193,19 @@ This project is licensed under GPLv3.
 The binary version of `blackbox_render` for MacOSX is statically linked to these libraries:
 
  - libbz2 http://www.bzip.org/ (BSD-like)
- - zlib http://www.zlib.net/
+ - zlib http://www.zlib.net/ (Zlib)
  - libcairo & libpixman http://cairographics.org/ (LGPL)
  - libfreetype http://www.freetype.org/ (BSD-like/GPLv2)
- - libpng16 http://www.libpng.org/pub/png/libpng.html
+ - libpng16 http://www.libpng.org/pub/png/libpng.html (PNG)
 
-The windows binary of `blackbox_render` additionally ships with these DLLs:
+The windows binary (win32) of `blackbox_render` additionally ships with these DLLs:
 
  - libiconv https://www.gnu.org/software/libiconv/ (LGPL)
  - libfontconfig http://www.freedesktop.org/wiki/Software/fontconfig/
  - libxml2 http://xmlsoft.org/ (MIT)
  - liblzma http://tukaani.org/xz/ (Public Domain)
 
-This font is included with both binary and source distributions:
+This font is included with source distributions:
 
  - Source Sans Pro - Regular https://github.com/adobe-fonts/source-sans-pro (SIL Open Font license)
 
