@@ -182,7 +182,7 @@ Macos `blacbox_decode` can also be cross-compiled on Linux using the supplied `M
 
 #### Windows (Win32)
 
-It is reported that the tools can be built with Visual Studio Express 2013, just open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable.
+Historically, the tools can be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable.
 
 The tools can also be cross-compiled on Linux (Win32 `blackbox_decode` and `blackbox_render`, Win64 `blackbox_decode`) using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64).
 
