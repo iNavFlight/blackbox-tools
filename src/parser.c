@@ -1065,8 +1065,6 @@ void flightlogFlightModeToString(flightLog_t *log, uint64_t flightMode, char *de
         else
             flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_BETAFLIGHT, dest, destLen);
     }
-    else
-        flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME, dest, destLen);
 }
 
 void flightlogFlightStateToString(flightLog_t *log, uint64_t flightState, char *dest, int destLen)

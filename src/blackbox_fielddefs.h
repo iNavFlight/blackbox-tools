@@ -101,8 +101,10 @@ extern const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[];
 
 extern const char * const FLIGHT_LOG_FLIGHT_STATE_NAME[];
 extern const char * const FLIGHT_LOG_FLIGHT_STATE_NAME_INAV[];
-
 #define FLIGHT_LOG_FLIGHT_STATE_COUNT 5
+
+extern const char * const INFLIGHT_ADJUSTMENT_FUNCTIONS[];
+# define INFLIGHT_ADJUSTMENT_LENGTH 57
 
 typedef enum {
     FAILSAFE_IDLE = 0,
@@ -208,16 +210,3 @@ typedef enum {
 	NAV_STATE_CRUISE_3D_ADJUSTING = 34,
 
 } navigationFSMState_t;
-
-typedef enum {
-	ACRO_MODE = (1 << 0),
-	ANGLE_MODE = (1 << 1),
-	HORIZON_MODE = (1 << 2),
-	NAV_ALTHOLD_MODE = (1 << 3), // old BARO
-	HEADING_MODE = (1 << 4),
-	HEADFREE_MODE = (1 << 5),
-	NAV_RTH_MODE = (1 << 8), // old GPS_HOME
-	NAV_POSHOLD_MODE = (1 << 9), // old GPS_HOLD
-	MANUAL_MODE = (1 << 10),
-	NAV_WP_MODE = (1 << 19),
-} flightModeFlags_e;
