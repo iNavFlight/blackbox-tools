@@ -38,7 +38,7 @@
 #define MIN_GPS_SATELLITES 5
 
 typedef struct decodeOptions_t {
-    int help, raw, limits, debug, toStdout;
+    int help, raw, limits, debug, toStdout, version;
     int logNumber;
     int simulateIMU, imuIgnoreMag;
     int simulateCurrentMeter;
@@ -53,7 +53,7 @@ typedef struct decodeOptions_t {
 } decodeOptions_t;
 
 decodeOptions_t options = {
-    .help = 0, .raw = 0, .limits = 0, .debug = 0, .toStdout = 0,
+    .help = 0, .raw = 0, .limits = 0, .debug = 0, .toStdout = 0, .version = 0,
     .logNumber = -1,
     .simulateIMU = false, .imuIgnoreMag = 0,
     .simulateCurrentMeter = false,
@@ -1248,6 +1248,12 @@ int validateLogIndex(flightLog_t *log)
     }
 }
 
+void printVersion(void) {
+#ifdef BLACKBOX_VERSION
+    fputs(STR(BLACKBOX_VERSION) "\n", stdout);
+#endif
+}
+
 void printUsage(const char *argv0)
 {
     fprintf(stderr,
@@ -1260,6 +1266,7 @@ void printUsage(const char *argv0)
         "     %s [options] <input logs>\n\n"
         "Options:\n"
         "   --help                   This page\n"
+        "   --version                Show version, exit\n"
         "   --index <num>            Choose the log from the file that should be decoded (or omit to decode all)\n"
         "   --limits                 Print the limits and range of each field\n"
         "   --stdout                 Write log to stdout instead of to a file\n"
@@ -1321,6 +1328,7 @@ void parseCommandlineOptions(int argc, char **argv)
     {
         static struct option long_options[] = {
             {"help", no_argument, &options.help, 1},
+            {"version", no_argument, &options.version, 1},
             {"raw", no_argument, &options.raw, 1},
             {"debug", no_argument, &options.debug, 1},
             {"limits", no_argument, &options.limits, 1},
@@ -1453,6 +1461,11 @@ int main(int argc, char **argv)
     platform_init();
 
     parseCommandlineOptions(argc, argv);
+
+    if (options.version) {
+        printVersion();
+	return 0;
+    }
 
     if (options.help || argc == 1) {
         printUsage(argv[0]);
