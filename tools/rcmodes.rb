@@ -27,6 +27,7 @@ def process_enums wanted,have,enums
       when 'adjustmentFunction_e'
         l = l.sub(/^ADJUSTMENT_/,'')
       end
+      l.gsub!(',','')
       puts "    \"#{l}\",\t\t// #{j}"
     end
     if have == "boxId_e" || have == "stateFlags_t"
@@ -60,7 +61,6 @@ File.open(bbdefs) do |fh|
 end
 
 hdrs.each do |k,v|
-  STDOUT.puts "#{k} #{v}"
   enums = []
   path = File.join(inavpath, k)
   wante = false
