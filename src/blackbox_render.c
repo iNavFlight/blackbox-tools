@@ -1332,7 +1332,9 @@ void printUsage(const char *argv0)
     fprintf(stderr,
         "Blackbox flight log renderer by Nicholas Sherlock ("
 #ifdef BLACKBOX_VERSION
-            "v" STR(BLACKBOX_VERSION) ", "
+            "v" STR(BLACKBOX_VERSION) " for INAV, "
+#else
+ #warning "BLACKBOX_VERSION is not set"
 #endif
             __DATE__ " " __TIME__ ")\n\n"
         "Usage:\n"
