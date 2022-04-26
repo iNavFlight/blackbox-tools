@@ -1250,7 +1250,7 @@ int validateLogIndex(flightLog_t *log)
 
 void printVersion(void) {
 #ifdef BLACKBOX_VERSION
-    fputs(STR(BLACKBOX_VERSION) "\n", stdout);
+    fputs(STR(BLACKBOX_VERSION) " (for INAV)\n", stdout);
 #endif
 }
 
@@ -1259,7 +1259,9 @@ void printUsage(const char *argv0)
     fprintf(stderr,
         "Blackbox flight log decoder by Nicholas Sherlock ("
 #ifdef BLACKBOX_VERSION
-            "v" STR(BLACKBOX_VERSION) ", "
+            "v" STR(BLACKBOX_VERSION) " for INAV, "
+#else
+ #warning "BLACKBOX_VERSION is not set"
 #endif
             __DATE__ " " __TIME__ ")\n\n"
         "Usage:\n"
