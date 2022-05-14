@@ -10,10 +10,26 @@ def process_enums wanted,have,enums
     processed = []
     enums.each_with_index do |l,j|
       l.chomp!
-      if m = l.match(/^([A-Za-z]\S+)/)
+      ev = nil
+      k = -1
+      if m = l.match(/^([A-Za-z]\S+)\s+=\s+(.*?),/)
         ev = m[1]
+        ex = m[2]
+        if z = ex.match(/\(1 << (\d+)\)/)
+          k = z[1].to_i
+        else
+          k = ex.to_i
+        end
+      elsif m = l.match(/^([A-Za-z]\S+)/)
+        ev = m[1]
+      end
+      if !ev.nil?
         break if ev.match(/_COUNT$/) && j = enums.size - 1
-        processed << ev
+        if k != -1
+          processed[k] =ev
+        else
+          processed << ev
+        end
       end
     end
 
@@ -26,6 +42,9 @@ def process_enums wanted,have,enums
         l = l.sub(/^FAILSAFE_/,'')
       when 'adjustmentFunction_e'
         l = l.sub(/^ADJUSTMENT_/,'')
+      end
+      if l.nil?
+        l = "**** MISSING ****"
       end
       l.gsub!(',','')
       puts "    \"#{l}\",\t\t// #{j}"
