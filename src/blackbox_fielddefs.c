@@ -142,7 +142,7 @@ const char * const FLIGHT_LOG_FLIGHT_STATE_NAME_INAV[] = {
     "NAV_MOTOR_STOP_OR_IDLE",           // 7
     "COMPASS_CALIBRATED",               // 8
     "ACCELEROMETER_CALIBRATED",         // 9
-    "PWM_DRIVER_AVAILABLE",             // 10
+    "PWM_DRIVER_AVAILABLE",             // 10 (Obsoleted)
     "NAV_CRUISE_BRAKING",               // 11
     "NAV_CRUISE_BRAKING_BOOST",         // 12
     "NAV_CRUISE_BRAKING_LOCKED",                // 13
@@ -158,6 +158,7 @@ const char * const FLIGHT_LOG_FLIGHT_STATE_NAME_INAV[] = {
     "SET_REVERSIBLE_MOTORS_FORWARD",            // 23
     "FW_HEADING_USE_YAW",               // 24
     "ANTI_WINDUP_DEACTIVATED",          // 25
+    "LANDING_DETECTED",                 // 26
     NULL
 };
 
@@ -232,5 +233,7 @@ const char * const INFLIGHT_ADJUSTMENT_FUNCTIONS[] = {
     "TPA",              // 54
     "TPA_BREAKPOINT",           // 55
     "NAV_FW_CONTROL_SMOOTHNESS",                // 56
-/* 57 elements */
+    "FW_TPA_TIME_CONSTANT",             // 57
+    "FW_LEVEL_TRIM",            // 58
+/* 59 elements */
 };
