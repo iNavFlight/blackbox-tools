@@ -50,6 +50,7 @@ typedef struct decodeOptions_t {
     int16_t simCurrentMeterOffset, simCurrentMeterScale;
 
     Unit unitGPSSpeed, unitFrameTime, unitVbat, unitAmperage, unitHeight, unitAcceleration, unitRotation, unitFlags;
+    int applyGframe;
 } decodeOptions_t;
 
 decodeOptions_t options = {
@@ -75,6 +76,7 @@ decodeOptions_t options = {
     .unitAcceleration = UNIT_RAW,
     .unitRotation = UNIT_RAW,
     .unitFlags = UNIT_FLAGS,
+    .applyGframe = 0,
 };
 
 #define FLIGHT_MODE(mask) (flightModeFlags & (mask))
@@ -82,6 +84,7 @@ decodeOptions_t options = {
 static GPSFieldType gpsFieldTypes[FLIGHT_LOG_MAX_FIELDS];
 
 static int64_t lastFrameTime;
+static int64_t lastGPSTime;
 static uint32_t lastFrameIteration;
 
 static FILE *csvFile = 0, *eventFile = 0, *gpsCsvFile = 0;
@@ -678,7 +681,6 @@ void onFrameReadyMerge(flightLog_t *log, bool frameValid, int64_t *frame, uint8_
                     gpsFrameTime = lastFrameTime;
                 } else {
                     gpsFrameTime = frame[log->gpsFieldIndexes.time];
-
                     /*
                      * This GPS frame happened some time after the main frame that preceded it, so print out that main
                      * frame with its older timestamp first if we didn't print it already.
@@ -694,9 +696,10 @@ void onFrameReadyMerge(flightLog_t *log, bool frameValid, int64_t *frame, uint8_
                  */
                 memcpy(bufferedGPSFrame, frame, sizeof(*bufferedGPSFrame) * fieldCount);
                 bufferedFrameTime = gpsFrameTime;
-
-                outputMergeFrame(log);
-
+		if ((options.applyGframe == 1 && gpsFrameTime > lastGPSTime) ||
+		    options.applyGframe == 2) {
+		    outputMergeFrame(log);
+		}
                 // We need at least lat/lon/altitude from the log to write a useful GPX track
 				bool haveRequiredFields = log->gpsFieldIndexes.GPS_coord[0] != -1 && log->gpsFieldIndexes.GPS_coord[1] != -1 && log->gpsFieldIndexes.GPS_altitude != -1;
 				bool haveRequiredPrecision = log->gpsFieldIndexes.GPS_numSat == -1 || frame[log->gpsFieldIndexes.GPS_numSat] >= MIN_GPS_SATELLITES;
@@ -704,6 +707,7 @@ void onFrameReadyMerge(flightLog_t *log, bool frameValid, int64_t *frame, uint8_
                 if (haveRequiredFields && haveRequiredPrecision) {
                     gpxWriterAddPoint(gpx, log, gpsFrameTime, frame[log->gpsFieldIndexes.GPS_coord[0]], frame[log->gpsFieldIndexes.GPS_coord[1]], frame[log->gpsFieldIndexes.GPS_altitude]);
                 }
+		lastGPSTime = gpsFrameTime;
             }
         break;
         case 'S':
@@ -1291,6 +1295,7 @@ void printUsage(const char *argv0)
         "   --declination-dec <val>  Set magnetic declination in decimal degrees (e.g. -12.97 for New York)\n"
         "   --debug                  Show extra debugging information\n"
         "   --raw                    Don't apply predictions to fields (show raw field deltas)\n"
+        "   --apply-gframe <flag>    How to apply intermediate G-frames (0=ignore (default), 1=when not \"late\", 2=always (legacy, may cause backwards timestamps))\n"
         "\n", argv0
     );
 }
@@ -1324,6 +1329,7 @@ void parseCommandlineOptions(int argc, char **argv)
         SETTING_UNIT_ACCELERATION,
         SETTING_UNIT_FRAME_TIME,
         SETTING_UNIT_FLAGS,
+	SETTING_GFRAME,
     };
 
     while (1)
@@ -1354,6 +1360,7 @@ void parseCommandlineOptions(int argc, char **argv)
             {"unit-acceleration", required_argument, 0, SETTING_UNIT_ACCELERATION},
             {"unit-frame-time", required_argument, 0, SETTING_UNIT_FRAME_TIME},
             {"unit-flags", required_argument, 0, SETTING_UNIT_FLAGS},
+	    {"apply-gframe",  required_argument, 0, SETTING_GFRAME},
             {0, 0, 0, 0}
         };
 
@@ -1369,6 +1376,13 @@ void parseCommandlineOptions(int argc, char **argv)
         switch (c) {
             case SETTING_INDEX:
                 options.logNumber = atoi(optarg);
+            break;
+            case SETTING_GFRAME:
+                options.applyGframe = atoi(optarg);
+		if (options.applyGframe < 0 || options.applyGframe > 2) {
+                    fprintf(stderr, "apply-gframe out of range (0-2)\n");
+                    exit(-1);
+		}
             break;
             case SETTING_PREFIX:
                 options.outputPrefix = optarg;
