@@ -43,7 +43,7 @@ ENCODER_TESTBED_SRC = $(COMMON_SRC) encoder_testbed.c encoder_testbed_io.c
 # This will prevent accidental deletion of startup code.
 .PRECIOUS: %.s
 
-# Search path for baseflight sources
+# Search path for decoder  sources
 VPATH		:= $(SRC_DIR)
 
 ###############################################################################
@@ -77,8 +77,6 @@ CFLAGS		= $(ARCH_FLAGS) \
 		-pthread \
 		-Wall -pedantic -Wextra -Wshadow
 
-CFLAGS += `pkg-config --cflags cairo` `pkg-config --cflags freetype2`
-
 # Supports native builds on
 # * Linux,FreeBSD (system dynamic libraries)
 # * MacOS, blackbox_render is statically linked unless MACDYN is set
@@ -100,6 +98,7 @@ else
  RENDER_LDFLAGS = `pkg-config --libs cairo` `pkg-config --libs freetype2`
 endif
 
+RENDER_CFLAGS = `pkg-config --cflags cairo` `pkg-config --cflags freetype2`
 LDFLAGS += -pthread -lm
 
 ###############################################################################
@@ -137,12 +136,17 @@ $(OBJECT_DIR)/%.o: %.c
 	@echo %% $(notdir $<)
 	@$(CC) -c -o $@ $(CFLAGS) $<
 
+obj/blackbox_render.o :  blackbox_render.c
+	@mkdir -p $(dir $@)
+	@echo %% $(notdir $<)
+	@$(CC) -c -o $@ $(CFLAGS) $(RENDER_CFLAGS) $<
+
 clean:
 	rm -f $(RENDERER_ELF) $(DECODER_ELF) $(ENCODER_TESTBED_ELF) $(ENCODER_TESTBED_OBJS) $(RENDERER_OBJS) $(DECODER_OBJS) $(TARGET_MAP)
 
 help:
 	@echo ""
-	@echo "Makefile for the baseflight blackbox data decoder"
+	@echo "Makefile for the INAV blackbox data decoder"
 	@echo ""
 	@echo "Usage:"
 	@echo "        make [OPTIONS=\"<options>\"]"
