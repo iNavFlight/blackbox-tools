@@ -118,6 +118,8 @@ const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[] = {
     "AUTOLEVEL",                // 45
     "PLANWPMISSION",            // 46
     "SOARING",          // 47
+    "USER3",            // 48
+    "CHANGEMISSION",            // 49
     NULL
 };
 
@@ -235,5 +237,6 @@ const char * const INFLIGHT_ADJUSTMENT_FUNCTIONS[] = {
     "NAV_FW_CONTROL_SMOOTHNESS",                // 56
     "FW_TPA_TIME_CONSTANT",             // 57
     "FW_LEVEL_TRIM",            // 58
-/* 59 elements */
+    "NAV_WP_MULTI_MISSION_INDEX",               // 59
+/* 60 elements */
 };
