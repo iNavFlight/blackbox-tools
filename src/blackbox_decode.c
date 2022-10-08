@@ -1120,6 +1120,8 @@ void resetParseState() {
     lastFrameTime = -1;
 
     seriesStats_init(&looptimeStats);
+    currentMeterInit(&currentMeterMeasured);
+    currentMeterInit(&currentMeterVirtual);
 }
 
 int decodeFlightLog(flightLog_t *log, const char *filename, int logIndex)
