@@ -119,7 +119,8 @@ const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[] = {
     "PLANWPMISSION",            // 46
     "SOARING",          // 47
     "USER3",            // 48
-    "CHANGEMISSION",            // 49
+    "USER4",             // 49,
+    "CHANGEMISSION",    // 50
     NULL
 };
 
