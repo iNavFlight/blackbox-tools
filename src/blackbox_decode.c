@@ -814,7 +814,7 @@ void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t fra
     }
 }
 
-void resetGPSFieldIdents()
+void resetGPSFieldIdents(void)
 {
     for (int i = 0; i < FLIGHT_LOG_MAX_FIELDS; i++) {
         gpsFieldTypes[i] = GPS_FIELD_TYPE_INTEGER;
@@ -1101,7 +1101,7 @@ void printStats(flightLog_t *log, int logIndex, bool raw, bool limits)
     fprintf(stderr, "\n");
 }
 
-void resetParseState() {
+void resetParseState(void) {
     if (options.simulateIMU) {
         imuInit();
     }

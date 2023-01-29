@@ -174,7 +174,7 @@ void munmap_file(fileMapping_t *mapping)
 /**
  * Call before any other routines in this unit.
  */
-void platform_init()
+void platform_init(void)
 {
 #ifdef POSIX
     pthread_attr_init(&pthreadCreateDetached);
