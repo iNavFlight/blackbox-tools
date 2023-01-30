@@ -60,7 +60,7 @@ typedef struct flightLogPrivate_t
     // When 32-bit time values roll over to zero, we add 2^32 to this accumulator so it can be added to the time:
     int64_t timeRolloverAccumulator;
 
-    int64_t gpsHomeHistory[2][FLIGHT_LOG_MAX_FIELDS]; // 0 - space to decode new frames into, 1 - previous frame
+    int64_t gpsHomeHistory[2][2]; // 0 - space to decode new frames into, 1 - previous frame
     bool gpsHomeIsValid;
 
     //Because these events don't depend on previous events, we don't keep copies of the old state, just the current one:
@@ -602,7 +602,6 @@ static int64_t applyPrediction(flightLog_t *log, int fieldIndex, int predictor, 
                 fprintf(stderr, "Attempted to base prediction on GPS home position without GPS home frame definition\n");
                 exit(-1);
             }
-
             value += private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]];
         break;
         case FLIGHT_LOG_FIELD_PREDICTOR_HOME_COORD_1:
@@ -610,7 +609,6 @@ static int64_t applyPrediction(flightLog_t *log, int fieldIndex, int predictor, 
                 fprintf(stderr, "Attempted to base prediction on GPS home position without GPS home frame definition\n");
                 exit(-1);
             }
-
             value += private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]];
         break;
         case FLIGHT_LOG_FIELD_PREDICTOR_LAST_MAIN_FRAME_TIME:
@@ -1342,7 +1340,13 @@ static bool completeGPSHomeFrame(flightLog_t *log, mmapStream_t *stream, uint8_t
     (void) raw;
 
     //Copy the decoded frame into the "last state" entry of gpsHomeHistory to publish it:
-    memcpy(&log->private->gpsHomeHistory[1], &log->private->gpsHomeHistory[0], sizeof(*log->private->gpsHomeHistory));
+//    memcpy(&log->private->gpsHomeHistory[1], &log->private->gpsHomeHistory[0], sizeof(*log->private->gpsHomeHistory));
+
+    log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]] =
+	log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]];
+    log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]] =
+	log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]];
+
     log->private->gpsHomeIsValid = log->private->mainStreamIsValid;
 
     if (log->private->onFrameReady) {
@@ -1604,10 +1608,11 @@ void flightLogDestroy(flightLog_t *log)
 bool getHomeCoordinates(flightLog_t *log, double *lat, double *lon)
 {
     if (log->private->gpsHomeIsValid) {
-        *lat = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[0]] / 1e7;
-        *lon = log->private->gpsHomeHistory[0][log->gpsHomeFieldIndexes.GPS_home[1]] / 1e7;
+        *lat = log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[0]] / 1e7;
+        *lon = log->private->gpsHomeHistory[1][log->gpsHomeFieldIndexes.GPS_home[1]] / 1e7;
     } else {
         *lat = *lon = 0;
     }
+
     return log->private->gpsHomeIsValid;
 }
