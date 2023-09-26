@@ -258,7 +258,7 @@ void onLogEvent(flightLog_t *log, flightLogEvent_t *event)
     }
 }
 
-void updateFieldMetadata()
+void updateFieldMetadata(void)
 {
     int motorGraphColorIndex = 0;
 
@@ -1027,7 +1027,7 @@ void saveSurfaceAsync(cairo_surface_t *surface, int logIndex, int outputFrameInd
     thread_create_detached(pngRenderThread, task);
 }
 
-void waitForFramesToSave()
+void waitForFramesToSave(void)
 {
     int i;
 
@@ -1555,7 +1555,7 @@ void parseCommandlineOptions(int argc, char **argv)
     }
 }
 
-static void applySmoothing() {
+static void applySmoothing(void) {
     if (options.gyroSmoothing && fieldMeta.hasGyros) {
         for (int axis = 0; axis < 3; axis++)
             datapointsSmoothField(points, flightLog->mainFieldIndexes.gyroADC[axis], options.gyroSmoothing);

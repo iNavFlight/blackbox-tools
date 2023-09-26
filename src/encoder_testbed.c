@@ -354,7 +354,7 @@ static bool testBlackboxConditionUncached(FlightLogFieldCondition condition)
     }
 }
 
-static void blackboxBuildConditionCache()
+static void blackboxBuildConditionCache(void)
 {
     FlightLogFieldCondition cond;
 
@@ -958,7 +958,7 @@ static bool sendFieldDefinition(char mainFrameChar, char deltaFrameChar, const v
  * Transmit a portion of the system information headers. Call the first time with xmitState.headerIndex == 0. Returns
  * true iff transmission is complete, otherwise call again later to continue transmission.
  */
-static bool blackboxWriteSysinfo()
+static bool blackboxWriteSysinfo(void)
 {
     blackboxPrintf("H Firmware type:Cleanflight\n");
     blackboxPrintf("H Firmware revision:xxxxxxx\n");
@@ -977,7 +977,7 @@ static bool blackboxWriteSysinfo()
     return true;
 }
 
-static void blackboxLogHeaders() {
+static void blackboxLogHeaders(void) {
     for (int i = 0; blackboxHeader[i] != '\0'; i++) {
         blackboxWrite(blackboxHeader[i]);
     }
