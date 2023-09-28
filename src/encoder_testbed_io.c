@@ -106,7 +106,7 @@ void blackboxWriteBits(uint32_t bits, unsigned int bitCount) {
     } while (bitCount > 0);
 }
 
-void blackboxFlushBits() {
+void blackboxFlushBits(void) {
     if (sizeof(blackboxBitBuffer) > 1) {
         // Round up the bits to get the number of occupied bytes
         int numBytes = (blackboxBitBufferCount + CHAR_BIT - 1) / CHAR_BIT;
