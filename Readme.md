@@ -124,6 +124,10 @@ The `blackbox_decode` tool for turning binary flight logs into CSV doesn't depen
 
 The `blackbox_render` tool renders a binary flight log into a series of PNG images which you can overlay on your flight video. Please read the section below that most closely matches your operating system for instructions on getting the `libcairo` library required to build the `blackbox_render` tool.
 
+### Version Information
+
+The version is set in `src/version.h`. If you wish, you may override this with the environment variable `BLACKBOX_VERSION` (e.g. make `BLACKBOX_VERSION=x.y.z-local`).
+
 #### Linux
 
 You will need `gcc` (or `clang`), `make` and `libcairo2` (development files).
@@ -182,9 +186,9 @@ Macos `blacbox_decode` can also be cross-compiled on Linux using the supplied `M
 
 #### Windows (Win32)
 
-Historically, the tools can be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable.
+The tools can be cross-compiled on Linux (Win32 `blackbox_decode` and `blackbox_render`, Win64 `blackbox_decode`) using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64), using the `Makefile`.
 
-The tools can also be cross-compiled on Linux (Win32 `blackbox_decode` and `blackbox_render`, Win64 `blackbox_decode`) using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64).
+Historically, the tools could be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable. This may or may not still work.
 
 ## License
 

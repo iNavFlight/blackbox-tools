@@ -67,7 +67,6 @@ LDFLAGS += -flto # required for clang LTO linking
 endif
 
 # Setting ARCH_FLAGS=-m32 permits building on Linux x86_64 for ia32 ..
-
 CFLAGS		= $(ARCH_FLAGS) \
 		$(LTO_FLAGS) \
 		$(addprefix -D,$(OPTIONS)) \
@@ -121,6 +120,13 @@ TARGET_MAP   = $(OBJECT_DIR)/blackbox_decode.map
 
 all : $(DECODER_ELF) $(RENDERER_ELF) $(ENCODER_TESTBED_ELF)
 
+ifneq ($(BLACKBOX_VERSION),)
+ $(info **INFO** Setting VERSION to $(BLACKBOX_VERSION))
+else
+ $(info **INFO* *Using src/version.h for VERSION)
+endif
+
+
 $(DECODER_ELF):  $(DECODER_OBJS)
 	@$(CC) $(ARCH_FLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -131,7 +137,7 @@ $(ENCODER_TESTBED_ELF): $(ENCODER_TESTBED_OBJS)
 	@$(CC) $(ARCH_FLAGS) -o $@ $^ $(LDFLAGS)
 
 # Compile
-$(OBJECT_DIR)/%.o: %.c
+$(OBJECT_DIR)/%.o: %.c version.h
 	@mkdir -p $(dir $@)
 	@echo %% $(notdir $<)
 	@$(CC) -c -o $@ $(CFLAGS) $<
