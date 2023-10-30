@@ -34,6 +34,8 @@
 #include "expo.h"
 #include "imu.h"
 
+#include "version.h"
+
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
@@ -1331,10 +1333,10 @@ void printUsage(const char *argv0)
 {
     fprintf(stderr,
         "Blackbox flight log renderer by Nicholas Sherlock ("
-#ifdef BLACKBOX_VERSION
-            "v" STR(BLACKBOX_VERSION) " for INAV, "
+#ifdef BBLTOOLS_VERSION
+            "v" STR(BBLTOOLS_VERSION) " for INAV, "
 #else
- #warning "BLACKBOX_VERSION is not set"
+ #warning "BBLTOOLS_VERSION is not set"
 #endif
             __DATE__ " " __TIME__ ")\n\n"
         "Usage:\n"
