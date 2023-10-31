@@ -166,6 +166,7 @@ const char * const FLIGHT_LOG_FLIGHT_STATE_NAME_INAV[] = {
     "FW_HEADING_USE_YAW",               // 24
     "ANTI_WINDUP_DEACTIVATED",          // 25
     "LANDING_DETECTED",                 // 26
+    "IN_FLIGHT_EMERG_REARM",            // 27
     NULL
 };
 
