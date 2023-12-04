@@ -91,7 +91,7 @@ ifneq (, $(findstring darwin, $(SYSTGT)))
  else
   RENDER_LDFLAGS = `pkg-config --libs cairo` `pkg-config --libs freetype2`
  endif
-else ifneq (, $(findstring mingw, $(SYSTGT)))
+else ifneq (, $(findstring Msys, $(SYSTGT)))
  RENDER_LDFLAGS = -Llib/win32/ -lcairo-2 -lfontconfig-1 -lfreetype-6 -liconv-2 -llzma-5 -lpixman-1-0 -lpng15-15 -lxml2-2 -lzlib1
 else
  RENDER_LDFLAGS = `pkg-config --libs cairo` `pkg-config --libs freetype2`
