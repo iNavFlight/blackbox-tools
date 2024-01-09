@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "blackbox_fielddefs.h"
 
@@ -152,7 +153,7 @@ typedef struct flightLogSysConfig_t {
 
     VbatType vbatType;
 
-    struct tm logStartTime;
+    struct timeval logStartTime;
     ParserMetaData metafound;
 } flightLogSysConfig_t;
 
@@ -190,6 +191,7 @@ typedef struct flightLog_t {
     slowFieldIndexes_t slowFieldIndexes;
 
     struct flightLogPrivate_t *private;
+    int64_t firsttime;
 } flightLog_t;
 
 typedef void (*FlightLogMetadataReady)(flightLog_t *log);
@@ -211,4 +213,5 @@ void flightlogFailsafePhaseToString(uint8_t failsafePhase, char *dest, int destL
 bool flightLogParse(flightLog_t *log, int logIndex, FlightLogMetadataReady onMetadataReady, FlightLogFrameReady onFrameReady, FlightLogEventReady onEvent, bool raw);
 void flightLogDestroy(flightLog_t *log);
 bool getHomeCoordinates(flightLog_t *log, double *lat, double *lon);
+
 #endif

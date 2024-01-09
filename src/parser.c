@@ -344,6 +344,40 @@ static void identifyFields(flightLog_t * log, uint8_t frameType, flightLogFrameD
     }
 }
 
+static void get_utc_time(char *str, struct timeval *tv) {
+    struct tm tm = {0};
+    double fracsec;
+    char *ep = NULL;
+    tm.tm_year = atoi(str + 2) + 100;
+    tm.tm_mon = atoi(str + 5) - 1;
+    tm.tm_mday = atoi(str + 8);
+    tm.tm_hour = atoi(str + 11);
+    tm.tm_min = atoi(str + 14);
+    fracsec = strtod(str + 17, &ep);
+    tm.tm_sec = (int)fracsec;
+    tm.tm_isdst = -1;
+#ifndef WIN32
+    char *p = ep;
+    long gmoff = 0;
+    for(; *p; p++) {
+	if(*p == '+' || *p == '-') {
+	    gmoff = strtol(p, &ep, 10);
+	    gmoff *= 60;
+	    if(*ep == ':') {
+		gmoff += strtol(ep+1, NULL, 10);
+	    }
+	    gmoff *= 60;
+	    break;
+	}
+    }
+    tm.tm_gmtoff = -gmoff;
+    unsetenv("TZ"); // force UTC
+    tzset();
+#endif
+    tv->tv_sec = mktime(&tm);
+    tv-> tv_usec = (fracsec-(int)fracsec)*1000000;
+}
+
 static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
 {
     char *fieldName, *fieldValue;
@@ -534,12 +568,7 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
         }
     }
     else if (strcmp(fieldName, "Log start datetime") == 0) {
-        log->sysConfig.logStartTime.tm_year = atoi(fieldValue + 2) + 100;
-        log->sysConfig.logStartTime.tm_mon = atoi(fieldValue + 5) - 1;
-        log->sysConfig.logStartTime.tm_mday = atoi(fieldValue + 8);
-        log->sysConfig.logStartTime.tm_hour = atoi(fieldValue + 11);
-        log->sysConfig.logStartTime.tm_min = atoi(fieldValue + 14);
-        log->sysConfig.logStartTime.tm_sec = atoi(fieldValue + 17);
+	get_utc_time(fieldValue, &log->sysConfig.logStartTime);
     }
 }
 
