@@ -348,6 +348,10 @@ static void get_utc_time(char *str, struct timeval *tv) {
     struct tm tm = {0};
     double fracsec;
     char *ep = NULL;
+
+    putenv("TZ=UTC0");
+    tzset();
+
     tm.tm_year = atoi(str + 2) + 100;
     tm.tm_mon = atoi(str + 5) - 1;
     tm.tm_mday = atoi(str + 8);
@@ -355,8 +359,7 @@ static void get_utc_time(char *str, struct timeval *tv) {
     tm.tm_min = atoi(str + 14);
     fracsec = strtod(str + 17, &ep);
     tm.tm_sec = (int)fracsec;
-    tm.tm_isdst = -1;
-#ifndef WIN32
+
     char *p = ep;
     long gmoff = 0;
     for(; *p; p++) {
@@ -370,11 +373,7 @@ static void get_utc_time(char *str, struct timeval *tv) {
 	    break;
 	}
     }
-    tm.tm_gmtoff = -gmoff;
-    unsetenv("TZ"); // force UTC
-    tzset();
-#endif
-    tv->tv_sec = mktime(&tm);
+    tv->tv_sec = mktime(&tm) - gmoff;
     tv-> tv_usec = (fracsec-(int)fracsec)*1000000;
 }
 
