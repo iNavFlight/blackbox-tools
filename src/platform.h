@@ -2,6 +2,7 @@
 #define PLATFORM_H_
 
 #include <stdbool.h>
+#include "parser.h"
 
 #if defined(__APPLE__)
     //MacOS doesn't have POSIX unnamed semaphores. Grand Central Dispatch provides an alternative:
@@ -67,5 +68,5 @@ void semaphore_signal(semaphore_t *sem);
 bool directory_create(const char *name);
 
 void platform_init(void);
-
+extern char *format_gps_timez(flightLog_t *, int64_t, char *, size_t);
 #endif

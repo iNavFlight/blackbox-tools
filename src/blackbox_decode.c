@@ -130,9 +130,9 @@ static void fprintfMilliampsInUnit(FILE *file, int32_t milliamps, Unit unit)
 
 static void fprintfMicrosecondsInUnit(flightLog_t *log, FILE *file, int64_t microseconds, Unit unit)
 {
-    int64_t startTime = log->sysConfig.logStartTime.tm_hour * 3600 + log->sysConfig.logStartTime.tm_min * 60 + log->sysConfig.logStartTime.tm_sec;
-    int64_t time = microseconds + startTime * 1000000;
-    uint32_t hours, mins, secs, frac;
+    if(log->firsttime == -1) {
+	log->firsttime = microseconds;
+    }
 
     switch (unit) {
         case UNIT_MICROSECONDS:
@@ -151,18 +151,9 @@ static void fprintfMicrosecondsInUnit(flightLog_t *log, FILE *file, int64_t micr
     }
 
     if (options.datetime) {
-        frac = (uint32_t)(time % 1000000);
-        secs = (uint32_t)(time / 1000000);
-
-        mins = secs / 60;
-        secs %= 60;
-
-        hours = mins / 60;
-        mins %= 60;
-
-        fprintf(file, ",%04u-%02u-%02uT%02u:%02u:%02u.%06uZ",
-            log->sysConfig.logStartTime.tm_year + 1900, log->sysConfig.logStartTime.tm_mon + 1, log->sysConfig.logStartTime.tm_mday,
-            hours, mins, secs, frac);
+	char tbuf[32];
+	format_gps_timez(log, microseconds, tbuf, sizeof(tbuf));
+        fprintf(file, ",%s", tbuf);
     }
 }
 
@@ -402,7 +393,7 @@ void createGPSCSVFile(flightLog_t *log)
 
             outputFieldNamesHeader(gpsCsvFile, &log->frameDefs['G'], gpsGFieldUnit, true);
 
-            fprintf(gpsCsvFile, "\n");
+            fprintf(gpsCsvFile, ",GPS_home_lat,GPS_home_lon\n");
         }
     }
 }
@@ -1138,6 +1129,7 @@ int decodeFlightLog(flightLog_t *log, const char *filename, int logIndex)
 
     eventFile = NULL;
     eventFilename = NULL;
+    log->firsttime = -1;
 
     if (options.toStdout) {
         csvFile = stdout;

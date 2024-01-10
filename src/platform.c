@@ -181,3 +181,43 @@ void platform_init(void)
     pthread_attr_setdetachstate(&pthreadCreateDetached, PTHREAD_CREATE_DETACHED);
 #endif
 }
+
+
+#ifndef WIN32
+char *format_gps_timez(flightLog_t *log, int64_t microseconds, char *tbuf, size_t tbufsz) {
+    struct timeval stv = {0, microseconds - log->firsttime};
+    struct timeval gtv;
+    struct tm *tm;
+
+    timeradd(&log->sysConfig.logStartTime, &stv, &gtv);
+    tm = gmtime(&gtv.tv_sec);
+    size_t ntm = strftime(tbuf, tbufsz, "%FT%T", tm);
+    sprintf(tbuf+ntm, ".%06ldZ", (long)gtv.tv_usec);
+    return tbuf;
+}
+#else
+#ifndef timeradd
+# define timeradd(a, b, result)						\
+    do {								\
+	(result)->tv_sec = (a)->tv_sec + (b)->tv_sec;			\
+	(result)->tv_usec = (a)->tv_usec + (b)->tv_usec;		\
+	if ((result)->tv_usec >= 1000000) {				\
+            ++(result)->tv_sec;						\
+	    (result)->tv_usec -= 1000000;				\
+	}								\
+    } while (0)
+#endif
+char *format_gps_timez(flightLog_t *log, int64_t microseconds, char *tbuf, size_t tbufsz) {
+    struct timeval stv = {0, microseconds - log->firsttime};
+    struct timeval gtv;
+    struct tm tm;
+    time_t t;
+    timeradd(&log->sysConfig.logStartTime, &stv, &gtv);
+    t = gtv.tv_sec;
+    gmtime_s(&tm, &t);
+    snprintf(tbuf, tbufsz, "%04u-%02u-%02uT%02u:%02u:%02u.%06ldZ",
+	     tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+	     tm.tm_hour, tm.tm_min, tm.tm_sec, (long)gtv.tv_usec);
+    return tbuf;
+}
+#endif
