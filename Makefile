@@ -17,7 +17,7 @@
 # Compile-time options
 OPTIONS		?=
 BLACKBOX_VERSION     ?=
-
+BLACKBOX_COMMIT ?=
 prefix ?= /usr/local
 
 # Debugger optons, must be empty or GDB
@@ -72,7 +72,8 @@ CFLAGS		= $(ARCH_FLAGS) \
 		$(addprefix -D,$(OPTIONS)) \
 		$(addprefix -I,$(INCLUDE_DIRS)) \
 		$(if $(strip $(BLACKBOX_VERSION)), -DBLACKBOX_VERSION=$(BLACKBOX_VERSION)) \
-		$(DEBUG_FLAGS) \
+		$(if $(strip $(BLACKBOX_COMMIT)), -DBLACKBOX_COMMIT=$(BLACKBOX_COMMIT)) \
+                $(DEBUG_FLAGS) \
 		-pthread \
 		-Wall -pedantic -Wextra -Wshadow
 
