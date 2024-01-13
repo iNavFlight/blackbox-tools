@@ -1,5 +1,7 @@
 #include "platform.h"
 
+#define US_PER_SEC 1000000
+
 #ifdef WIN32
     #include <direct.h>
 #else
@@ -182,15 +184,12 @@ void platform_init(void)
 #endif
 }
 
-
 #ifndef WIN32
 char *format_gps_timez(flightLog_t *log, int64_t microseconds, char *tbuf, size_t tbufsz) {
     suseconds_t tdiff = microseconds - log->firsttime;
-    struct timeval stv = {tdiff/1000000, tdiff % 1000000};
+    struct timeval stv = {tdiff/US_PER_SEC, tdiff % US_PER_SEC};
     struct timeval gtv;
     struct tm *tm;
-
-
 
     timeradd(&log->sysConfig.logStartTime, &stv, &gtv);
     tm = gmtime(&gtv.tv_sec);
@@ -204,15 +203,15 @@ char *format_gps_timez(flightLog_t *log, int64_t microseconds, char *tbuf, size_
     do {								\
 	(result)->tv_sec = (a)->tv_sec + (b)->tv_sec;			\
 	(result)->tv_usec = (a)->tv_usec + (b)->tv_usec;		\
-	if ((result)->tv_usec >= 1000000) {				\
+	if ((result)->tv_usec >= US_PER_SEC) {				\
             ++(result)->tv_sec;						\
-	    (result)->tv_usec -= 1000000;				\
+	    (result)->tv_usec -= US_PER_SEC;				\
 	}								\
     } while (0)
 #endif
 char *format_gps_timez(flightLog_t *log, int64_t microseconds, char *tbuf, size_t tbufsz) {
     long tdiff = microseconds - log->firsttime;
-    struct timeval stv = {tdiff/1000000, tdiff % 1000000};
+    struct timeval stv = {tdiff/US_PER_SEC, tdiff % US_PER_SEC};
     struct timeval gtv;
     struct tm tm;
     time_t t;
