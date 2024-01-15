@@ -18,7 +18,7 @@ blackbox_decode LOG00001.TXT
 
 That'll decode the log to `LOG00001.01.csv` and print out some statistics about the log. If you're using Windows, you can drag and drop your log files onto `blackbox_decode` and they'll all be decoded. Please note that you shouldn't discard the original ".TXT" file, because it is required as input for other tools like the PNG image renderer.
 
-If your log file contains GPS data then a ".gpx" file will also be produced. This file can be opened in Google Earth or some other GPS mapping software for analysis. This feature is experimental.
+If your log file contains GPS data then a ".gpx" file will also be produced. This file can be opened in Google Earth or some other GPS mapping software for analysis.
 
 Use the `--help` option to show more details:
 
@@ -128,6 +128,14 @@ The `blackbox_render` tool renders a binary flight log into a series of PNG imag
 
 The version is set in `src/version.h`. If you wish, you may override this with the environment variable `BLACKBOX_VERSION` (e.g. make `BLACKBOX_VERSION=x.y.z-local`).
 
+If an environment variable `BLACKBOX_COMMIT` is set, the git commit id will also be shown as part of the version:
+
+```
+$ BLACKBOX_COMMIT=$(git rev-parse --short HEAD) make
+$ blackbox_decode --version
+7.0.1 #c7b9215 INAV
+```
+
 #### Linux
 
 You will need `gcc` (or `clang`), `make` and `libcairo2` (development files).
@@ -153,6 +161,9 @@ gmake
 ```
 
 #### MacOSX
+
+Note: These instructions need validating.
+
 The easiest way to build is to install the [Xcode development tool][], then install an environment like [Homebrew][] or [MacPorts][] onto your system.
 
 From MacPorts, you would do this to get LibCairo:
@@ -188,7 +199,7 @@ Macos `blacbox_decode` can also be cross-compiled on Linux using the supplied `M
 
 The tools can be cross-compiled on Linux (Win32 `blackbox_decode` and `blackbox_render`, Win64 `blackbox_decode`) using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64), using the `Makefile`.
 
-Historically, the tools could be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable. This may or may not still work.
+Historically, the tools could be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable. This may or (more likely) may not still work.
 
 ## License
 

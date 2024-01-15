@@ -17,7 +17,7 @@
 # Compile-time options
 OPTIONS		?=
 BLACKBOX_VERSION     ?=
-
+BLACKBOX_COMMIT =
 prefix ?= /usr/local
 
 # Debugger optons, must be empty or GDB
@@ -66,13 +66,19 @@ DEBUG_FLAGS =
 LDFLAGS += -flto # required for clang LTO linking
 endif
 
+BLACKBOX_COMMIT := unknown
+ifeq ($(shell git diff --shortstat),)
+BLACKBOX_COMMIT := $(shell git log -1 --format="%h")
+endif
+
 # Setting ARCH_FLAGS=-m32 permits building on Linux x86_64 for ia32 ..
 CFLAGS		= $(ARCH_FLAGS) \
 		$(LTO_FLAGS) \
 		$(addprefix -D,$(OPTIONS)) \
 		$(addprefix -I,$(INCLUDE_DIRS)) \
 		$(if $(strip $(BLACKBOX_VERSION)), -DBLACKBOX_VERSION=$(BLACKBOX_VERSION)) \
-		$(DEBUG_FLAGS) \
+		$(if $(strip $(BLACKBOX_COMMIT)), -DBLACKBOX_COMMIT=$(BLACKBOX_COMMIT)) \
+                $(DEBUG_FLAGS) \
 		-pthread \
 		-Wall -pedantic -Wextra -Wshadow
 

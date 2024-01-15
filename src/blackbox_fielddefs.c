@@ -125,6 +125,7 @@ const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[] = {
     "MULTIFUNCTION",    // 52,
     "MIXERPROFILE",     // 53,
     "MIXERTRANSITION",  // 54
+    "ANGLEHOLD", 	// 55
     NULL
 };
 
@@ -167,6 +168,7 @@ const char * const FLIGHT_LOG_FLIGHT_STATE_NAME_INAV[] = {
     "ANTI_WINDUP_DEACTIVATED",          // 25
     "LANDING_DETECTED",                 // 26
     "IN_FLIGHT_EMERG_REARM",            // 27
+    "TAILSITTER",			// 28
     NULL
 };
 
