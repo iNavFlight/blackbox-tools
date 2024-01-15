@@ -118,12 +118,12 @@ static char* get_bb_version(bool for_inav) {
 #define BBLTOOLS_VERSION 0.0.0
 #endif
   strcpy(verstr, STR(BBLTOOLS_VERSION));
-#ifdef BLACKBOX_COMMIT
-  strcat(verstr, " #" STR(BLACKBOX_COMMIT));
-#endif
   if(for_inav) {
       strcat(verstr, " INAV");
   }
+#ifdef BLACKBOX_COMMIT
+  strcat(verstr, " " STR(BLACKBOX_COMMIT));
+#endif
   return verstr;
 }
 
@@ -1267,7 +1267,7 @@ int validateLogIndex(flightLog_t *log)
 void printUsage(const char *argv0)
 {
     fprintf(stderr,
-        "INAV Blackbox flight log decoder by Nicholas Sherlock (v %s, "  __DATE__ " " __TIME__ ")\n\n"
+        "INAV Blackbox flight log decoder by Nicholas Sherlock (v%s, "  __DATE__ " " __TIME__ ")\n\n"
         "Usage:\n"
         "     %s [options] <input logs>\n\n"
         "Options:\n"

@@ -66,7 +66,7 @@ DEBUG_FLAGS =
 LDFLAGS += -flto # required for clang LTO linking
 endif
 
-BLACKBOX_COMMIT := nocommit
+BLACKBOX_COMMIT := unknown
 ifeq ($(shell git diff --shortstat),)
 BLACKBOX_COMMIT := $(shell git log -1 --format="%h")
 endif
