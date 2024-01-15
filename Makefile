@@ -17,7 +17,7 @@
 # Compile-time options
 OPTIONS		?=
 BLACKBOX_VERSION     ?=
-BLACKBOX_COMMIT ?=
+BLACKBOX_COMMIT =
 prefix ?= /usr/local
 
 # Debugger optons, must be empty or GDB
@@ -64,6 +64,11 @@ OPTIMIZE	 = -O3
 LTO_FLAGS	 = -flto $(OPTIMIZE)
 DEBUG_FLAGS =
 LDFLAGS += -flto # required for clang LTO linking
+endif
+
+BLACKBOX_COMMIT := nocommit
+ifeq ($(shell git diff --shortstat),)
+BLACKBOX_COMMIT := $(shell git log -1 --format="%h")
 endif
 
 # Setting ARCH_FLAGS=-m32 permits building on Linux x86_64 for ia32 ..
