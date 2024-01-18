@@ -2,6 +2,7 @@
 #define PLATFORM_H_
 
 #include <stdbool.h>
+
 #include "parser.h"
 
 #if defined(__APPLE__)
@@ -69,4 +70,8 @@ bool directory_create(const char *name);
 
 void platform_init(void);
 extern char *format_gps_timez(flightLog_t *, int64_t, char *, size_t);
+
+#define US_PER_SEC 1000000
+
+
 #endif

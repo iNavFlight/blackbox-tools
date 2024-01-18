@@ -146,8 +146,8 @@ static void fprintfMilliampsInUnit(FILE *file, int32_t milliamps, Unit unit)
 
 static void fprintfMicrosecondsInUnit(flightLog_t *log, FILE *file, int64_t microseconds, Unit unit)
 {
-    if(log->firsttime == -1) {
-	log->firsttime = microseconds;
+    if(log->gpsStartTime == -1) {
+	log->gpsStartTime = log->sysConfig.logStartTime - microseconds;
     }
 
     switch (unit) {
@@ -1143,7 +1143,8 @@ int decodeFlightLog(flightLog_t *log, const char *filename, int logIndex)
 
     eventFile = NULL;
     eventFilename = NULL;
-    log->firsttime = -1;
+
+    log->gpsStartTime = -1;
 
     if (options.toStdout) {
         csvFile = stdout;

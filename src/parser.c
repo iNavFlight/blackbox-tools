@@ -344,7 +344,7 @@ static void identifyFields(flightLog_t * log, uint8_t frameType, flightLogFrameD
     }
 }
 
-static void get_utc_time(char *str, struct timeval *tv) {
+static int64_t get_utc_time(char *str) {
     struct tm tm = {0};
     double fracsec;
     char *ep = NULL;
@@ -373,8 +373,11 @@ static void get_utc_time(char *str, struct timeval *tv) {
 	    break;
 	}
     }
-    tv->tv_sec = mktime(&tm) - gmoff;
-    tv-> tv_usec = (fracsec-(int)fracsec)*1000000;
+    int64_t utime = mktime(&tm) - gmoff;
+    utime *= US_PER_SEC;
+    int64_t usec = (fracsec-(int)fracsec)*US_PER_SEC;
+    utime += usec;
+    return utime;
 }
 
 static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
@@ -567,7 +570,7 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
         }
     }
     else if (strcmp(fieldName, "Log start datetime") == 0) {
-	get_utc_time(fieldValue, &log->sysConfig.logStartTime);
+	log->sysConfig.logStartTime = get_utc_time(fieldValue);
     }
 }
 

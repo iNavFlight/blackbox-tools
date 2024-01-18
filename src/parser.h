@@ -153,7 +153,7 @@ typedef struct flightLogSysConfig_t {
 
     VbatType vbatType;
 
-    struct timeval logStartTime;
+    int64_t logStartTime;
     ParserMetaData metafound;
 } flightLogSysConfig_t;
 
@@ -191,7 +191,7 @@ typedef struct flightLog_t {
     slowFieldIndexes_t slowFieldIndexes;
 
     struct flightLogPrivate_t *private;
-    int64_t firsttime;
+    int64_t gpsStartTime;
 } flightLog_t;
 
 typedef void (*FlightLogMetadataReady)(flightLog_t *log);
