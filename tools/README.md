@@ -1,4 +1,8 @@
-# Consistency helper
+# blackbox_decode_complete.sh -- bash completion
+
+As long as you have completion enabled in your `bash` shell, then you can use tab completion for fast and ergonomic completion of options and file names. This is installed by `make install`.
+
+# rcmodes.rb -- maintenance consistency helper
 
 ## Function
 

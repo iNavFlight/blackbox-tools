@@ -169,6 +169,8 @@ help:
 install: $(DECODER_ELF) $(RENDERER_ELF)
 	install -d $(prefix)/bin
 	install -s -m 755  $(DECODER_ELF) $(RENDERER_ELF) $(prefix)/bin/
+	install -d $(prefix)/share/bash-completion/completions/
+	install -m 644 tools/blackbox_decode_complete.sh $(prefix)/share/bash-completion/completions/blackbox_decode
 
 uninstall:
 	rm -f $(prefix)/bin/blackbox_decode  $(prefix)/bin/blackbox_render
