@@ -4,33 +4,42 @@
 
 ## Introduction
 
-These tools allow you to convert flight data logs recorded by inav's Blackbox feature into CSV files (comma-separated values) for analysis, or into a series of PNG files which you could turn into a video.
+These tools allow you to convert flight data logs recorded by INAV's Blackbox feature into CSV files (comma-separated values) for analysis, or into a series of PNG files which you could turn into a video.
 
-You can download the latest executable versions of these tools for Linux, Mac or Windows from the "releases" tab above. If you're running Linux on ARM or FreeBSD, you must build the tools from source (instructions are further down this page).
+You can download the latest executable versions of these tools for x86_64 on Linux, MacOS or Windows (x86_64 and ia-32) from the "releases" tab above. If you're running Linux on ARM or RISCV or FreeBSD, you can build the tools from source (instructions are further down this page).
 
 ## Using the blackbox_decode tool
 
-This tool converts a flight log binary ".TXT" file into CSV format. Typical usage (from the command line) would be like:
+This is a *command line* tool. It should be run from a "shell" (e.g. "bash", "zsh", "cmd", "powershell" etc.)
+
+In order to converts a flight log binary ".TXT" file into CSV format, a typical usage (from the command line) would be like:
 
 ```bash
 blackbox_decode LOG00001.TXT
 ```
 
-That'll decode the log to `LOG00001.01.csv` and print out some statistics about the log. If you're using Windows, you can drag and drop your log files onto `blackbox_decode` and they'll all be decoded. Please note that you shouldn't discard the original ".TXT" file, because it is required as input for other tools like the PNG image renderer.
+That'll decode the log to `LOG00001.01.csv` and print out some statistics about the log. If you're using Windows, you can drag and drop your log files onto `blackbox_decode` and they'll all be decoded, but this prevents using some of the more useful options listed below. Please note that you shouldn't discard the original ".TXT" file, because it is required as input for other tools like the PNG image renderer.
 
-If your log file contains GPS data then a ".gpx" file will also be produced. This file can be opened in Google Earth or some other GPS mapping software for analysis.
+If your log file contains GPS data then a ".gpx" file will also be produced. This file can be opened in Google Earth or some other GPS mapping software for analysis. You can also include more comprehensive GPS data in the log file, for example:
 
-Use the `--help` option to show more details:
+* Add flight date / time to the CSV
+* Include GPS information in the CSV
+
+```
+blackbox_decode --datetime --merge-gps LOG00042.TXT
+```
+
+Use the `--help` option to show more details and all the options, for example:
 
 ```text
-blackbox_decode --help
-Blackbox flight log decoder by Nicholas Sherlock (vX.Y.Z, MMM DD YYYY hh:mm:ss)
+INAV Blackbox flight log decoder by Nicholas Sherlock (v7.0.1 123714c, Jan 19 2024 21:36:10)
 
 Usage:
      blackbox_decode [options] <input logs>
 
 Options:
    --help                   This page
+   --version                Show version, exit
    --index <num>            Choose the log from the file that should be decoded (or omit to decode all)
    --limits                 Print the limits and range of each field
    --stdout                 Write log to stdout instead of to a file
@@ -53,6 +62,38 @@ Options:
    --declination-dec <val>  Set magnetic declination in decimal degrees (e.g. -12.97 for New York)
    --debug                  Show extra debugging information
    --raw                    Don't apply predictions to fields (show raw field deltas)
+   --apply-gframe <flag>    How to apply intermediate G-frames (0=ignore (default), 1=when not "late", 2=always (legacy, may cause backwards timestamps))
+```
+
+`blackbox_decode` will display some statistics about the log. It will warn you if it's missing essential metadata that effectively renders the log useless for analysis.
+
+```
+$ blackbox_decode corrupt-header.TXT
+Decoding log 'corrupt-header.TXT' to 'corrupt-header.01.csv'...
+
+Log 1 of 1, start 02:57.817, end 09:45.237, duration 06:47.419
+
+Statistics
+Looptime           1890 avg          460.0 std dev (24.3%)
+I frames   12634  113.7 bytes avg  1437103 bytes total
+P frames  169062   69.0 bytes avg 11660607 bytes total
+H frames     100   10.0 bytes avg     1000 bytes total
+G frames    2119   24.1 bytes avg    50991 bytes total
+E frames       1    6.0 bytes avg        6 bytes total
+S frames       3   45.3 bytes avg      136 bytes total
+Frames    181696   72.1 bytes avg 13097710 bytes total
+Data rate  445Hz  36121 bytes/s     361300 baud
+
+3438 frames failed to decode, rendering 20444 loop iterations unreadable. 222863 iterations are missing in total (224438ms, 55.09%)
+
+WARNING: Missing expected metadata - check for log corruption
+	Warning: No VBAT reference
+	Error: No Firmware type metadata
+	Error: No Firmware revision metadata
+	Error: No P Interval
+	Error: No Acc.1G metadata
+
+Generated by INAV blackbox_decode 7.0.1 123714c
 ```
 
 ## Using the blackbox_render tool
@@ -68,7 +109,7 @@ This will create PNG files at 30 fps into a new directory called `LOG00001.01` n
 Use the `--help` option to show more details:
 
 ```text
-Blackbox flight log renderer by Nicholas Sherlock
+Blackbox flight log renderer by Nicholas Sherlock (v7.0.1 for INAV, Jan 19 2024 21:36:12)
 
 Usage:
      blackbox_render [options] <logfilename.txt>
@@ -79,6 +120,7 @@ Options:
    --width <px>           Choose the width of the image (default 1920)
    --height <px>          Choose the height of the image (default 1080)
    --fps                  FPS of the resulting video (default 30)
+   --threads              Number of threads to use to render frames (default 3)
    --prefix <filename>    Set the prefix of the output frame filenames
    --start <x:xx>         Begin the log at this time offset (default 0:00)
    --end <x:xx>           End the log at this time offset
@@ -92,8 +134,10 @@ Options:
    --smoothing-pid <n>    Smoothing window for the PIDs (default 4)
    --smoothing-gyro <n>   Smoothing window for the gyroscopes (default 2)
    --smoothing-motor <n>  Smoothing window for the motors (default 2)
+   --unit-gyro <raw|degree>  Unit for the gyro values in the table (default raw)
    --prop-style <name>    Style of propeller display (pie/blades, default pie)
    --gapless              Fill in gaps in the log with straight lines
+   --raw-amperage         Print the current sensor ADC value along with computed amperage
 ```
 
 (At least on Windows) if you just want to render a log file using the defaults, you can drag and drop a log onto the blackbox_render program and it'll start generating the PNGs immediately.
@@ -126,19 +170,22 @@ The `blackbox_render` tool renders a binary flight log into a series of PNG imag
 
 ### Version Information
 
-The version is set in `src/version.h`. If you wish, you may override this with the environment variable `BLACKBOX_VERSION` (e.g. make `BLACKBOX_VERSION=x.y.z-local`).
+The version is set in `src/version.h`. If you wish, you may override this with the environment variable `BLACKBOX_VERSION` (e.g. `make BLACKBOX_VERSION=x.y.z-local`).
 
-If an environment variable `BLACKBOX_COMMIT` is set, the git commit id will also be shown as part of the version:
+The Makefile attempts to evince an environment variable `BLACKBOX_COMMIT`; this is set, the git commit id will also be shown as part of the version. You may override this:
 
 ```
-$ BLACKBOX_COMMIT=$(git rev-parse --short HEAD) make
 $ blackbox_decode --version
-7.0.1 #c7b9215 INAV
+7.0.1 INAV 123714c
+
+$ BLACKBOX_COMMIT=uncommitted make
+$ blackbox_decode --version
+7.0.1 INAV uncommitted
 ```
 
 #### Linux
 
-You will need `gcc` (or `clang`), `make` and `libcairo2` (development files).
+You will need `gcc` (or `clang`), `make` and (for `blackbox_render`), `libcairo2` (development files).
 
 For Debian (Ubuntu etc.), you can get the tools required for building by entering these commands into the terminal:
 
@@ -193,13 +240,30 @@ $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/opt/X11/lib/pkgconfig
 [Homebrew]: http://brew.sh/
 [MacPorts]: https://www.macports.org/
 
-Macos `blacbox_decode` can also be cross-compiled on Linux using the supplied `Makefile`.
+MacOS `blacbox_decode` can also be cross-compiled on Linux using the supplied `Makefile`.
 
 #### Windows (Win32)
 
-The tools can be cross-compiled on Linux (Win32 `blackbox_decode` and `blackbox_render`, Win64 `blackbox_decode`) using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64), using the `Makefile`.
+The tools can be cross-compiled on Linux (Win32 `blackbox_decode.exe` and `blackbox_render.exe`, Win64 `blackbox_decode.exe` using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64), using the `Makefile`. You will need to install the required tools and libraries (`pacman -S  make gcc cairo`).
 
-Historically, the tools could be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable. This may or (more likely) may not still work.
+Historically, the tools could be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable. This is no longer supported and may or (more likely), may not work.
+
+#### Install from build
+
+The `Makefile` includes an `install` stanza. This may be augmented by `prefix` to specify the installation directory prefix, which otherwise defaults to `/usr/local`.
+
+For example, with `prefix` set to  `$HOME/.local`:
+
+```
+# Note "/bin" is appended by the Makefile
+make install prefix=~/.local
+```
+
+Results in:
+```
+$HOME/.local/bin/blackbox_decode
+$HOME/.local/bin/blackbox_render
+```
 
 ## License
 
@@ -219,6 +283,8 @@ The windows binary (win32) of `blackbox_render` additionally ships with these DL
  - libfontconfig http://www.freedesktop.org/wiki/Software/fontconfig/
  - libxml2 http://xmlsoft.org/ (MIT)
  - liblzma http://tukaani.org/xz/ (Public Domain)
+
+The source distribution includes the source for these libraries as well object libraries for MacOS and Windows. Linux and FreeBSD will use the currently installed OS versions.
 
 This font is included with source distributions:
 
