@@ -105,6 +105,7 @@ typedef struct renderOptions_t {
     int logNumber;
     int imageWidth, imageHeight;
     int fps;
+    int mode;
     int help;
     int threads;
 
@@ -207,7 +208,8 @@ static const renderOptions_t defaultOptions = {
     .timeStart = 0, .timeEnd = 0,
     .logNumber = 0,
     .gapless = 0,
-    .rawAmperage = 0
+    .rawAmperage = 0,
+    .mode = 1
 };
 
 //Cairo doesn't include this in any header (apparently it is considered private?)
@@ -229,6 +231,24 @@ static fieldIdentifications_t fieldMeta;
 static FT_Library freetypeLibrary;
 
 static uint32_t syncBeepTime = -1;
+
+static int yawidx[] =  {0, 0, 2, 2};  // Rudder
+static int thridx[] =  {3, 1, 3, 1};  // Throttle
+static int rollidx[] = {2, 2, 0, 0};  // Aileron
+static int ptchidx[] = {1, 3, 1, 3}; // Elevator
+
+#define RCC_A 0
+#define RCC_E 1
+#define RCC_R 2
+#define RCC_T 3
+
+// Left Hor, Left Vert, Right Hor, Right Vert to rccommand indices
+static int rcmodemap [][4] = {
+    {RCC_R, RCC_E, RCC_A, RCC_T},  // Mode 1
+    {RCC_R, RCC_T, RCC_A, RCC_E},  // Mode 2
+    {RCC_A, RCC_E, RCC_R, RCC_T},  // Mode 3
+    {RCC_A, RCC_T, RCC_R, RCC_E},  // Mode 4
+};
 
 void loadFrameIntoPoints(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t frameType, int fieldCount, int frameOffset, int frameSize)
 {
@@ -342,17 +362,21 @@ void drawCommandSticks(int64_t *frame, int imageWidth, int imageHeight, cairo_t 
         //Check that stick data is present to be drawn:
         if (flightLog->mainFieldIndexes.rcCommand[stickIndex] < 0)
             return;
-
         rcCommand[stickIndex] = frame[flightLog->mainFieldIndexes.rcCommand[stickIndex]];
     }
 
     //Compute the position of the sticks in the range [-1..1] (left stick x, left stick y, right stick x, right stick y)
     double stickPositions[4];
 
-    stickPositions[0] = -rcCommand[2] / yawStickMax; //Yaw
-    stickPositions[1] = (1500 - rcCommand[3]) / 500; //Throttle
-    stickPositions[2] = expoCurveLookup(pitchStickCurve, rcCommand[0]); //Roll
-    stickPositions[3] = expoCurveLookup(pitchStickCurve, -rcCommand[1]); //Pitch
+    double yawpos = -rcCommand[2] / yawStickMax; //Yaw (R)
+    double thrpos = (1500 - rcCommand[3]) / 500; //Throttle (T)
+    double rollpos= expoCurveLookup(pitchStickCurve, rcCommand[0]); //Roll (A)
+    double ptchpos = expoCurveLookup(pitchStickCurve, -rcCommand[1]); //Pitch (E)
+
+    stickPositions[yawidx[options.mode]] = yawpos;
+    stickPositions[thridx[options.mode]] = thrpos;
+    stickPositions[rollidx[options.mode]] = rollpos;
+    stickPositions[ptchidx[options.mode]] = ptchpos;
 
     for (stickIndex = 0; stickIndex < 4; stickIndex++) {
         //Clamp to [-1..1]
@@ -392,8 +416,9 @@ void drawCommandSticks(int64_t *frame, int imageWidth, int imageHeight, cairo_t 
 
         //Draw horizontal stick label
         int32_t labelValue;
-
-        labelValue = frame[flightLog->mainFieldIndexes.rcCommand[(1 - i) * 2 + 0]];
+	int label_index;
+	label_index = rcmodemap[options.mode][0+i*2];
+	labelValue = frame[flightLog->mainFieldIndexes.rcCommand[label_index]];
 
         snprintf(stickLabel, sizeof(stickLabel), "%d", labelValue);
         cairo_text_extents(cr, stickLabel, &extent);
@@ -402,7 +427,11 @@ void drawCommandSticks(int64_t *frame, int imageWidth, int imageHeight, cairo_t 
         cairo_show_text(cr, stickLabel);
 
         //Draw vertical stick label
-        snprintf(stickLabel, sizeof(stickLabel), "%" PRId64, frame[flightLog->mainFieldIndexes.rcCommand[(1 - i) * 2 + 1]]);
+	label_index = rcmodemap[options.mode][1+i*2];
+
+	labelValue = frame[flightLog->mainFieldIndexes.rcCommand[label_index]];
+
+        snprintf(stickLabel, sizeof(stickLabel), "%d", labelValue);
         cairo_text_extents(cr, stickLabel, &extent);
 
         cairo_move_to(cr, -stickSurroundRadius - extent.width - 8, extent.height / 2);
@@ -1339,36 +1368,37 @@ void printUsage(const char *argv0)
  #warning "BBLTOOLS_VERSION is not set"
 #endif
             __DATE__ " " __TIME__ ")\n\n"
-        "Usage:\n"
-        "     %s [options] <logfilename.txt>\n\n"
-        "Options:\n"
-        "   --help                 This page\n"
-        "   --index <num>          Choose which log from the file should be rendered\n"
-        "   --width <px>           Choose the width of the image (default %d)\n"
-        "   --height <px>          Choose the height of the image (default %d)\n"
-        "   --fps                  FPS of the resulting video (default %d)\n"
-        "   --threads              Number of threads to use to render frames (default %d)\n"
-        "   --prefix <filename>    Set the prefix of the output frame filenames\n"
-        "   --start <x:xx>         Begin the log at this time offset (default 0:00)\n"
-        "   --end <x:xx>           End the log at this time offset\n"
-        "   --[no-]draw-pid-table  Show table with PIDs and gyros (default on)\n"
-        "   --[no-]draw-craft      Show craft drawing (default on)\n"
-        "   --[no-]draw-sticks     Show RC command sticks (default on)\n"
-        "   --[no-]draw-time       Show frame number and time in bottom right (default on)\n"
-        "   --[no-]plot-motor      Draw motors on the upper graph (default on)\n"
-        "   --[no-]plot-pid        Draw PIDs on the lower graph (default off)\n"
-        "   --[no-]plot-gyro       Draw gyroscopes on the lower graph (default on)\n"
-        "   --smoothing-pid <n>    Smoothing window for the PIDs (default %d)\n"
-        "   --smoothing-gyro <n>   Smoothing window for the gyroscopes (default %d)\n"
-        "   --smoothing-motor <n>  Smoothing window for the motors (default %d)\n"
-        "   --unit-gyro <raw|degree>  Unit for the gyro values in the table (default %s)\n"
-        "   --prop-style <name>    Style of propeller display (pie/blades, default %s)\n"
-        "   --gapless              Fill in gaps in the log with straight lines\n"
-        "   --raw-amperage         Print the current sensor ADC value along with computed amperage\n"
-        "\n", argv0, defaultOptions.imageWidth, defaultOptions.imageHeight, defaultOptions.fps, defaultOptions.threads,
+	    "Usage:\n"
+	    "     %s [options] <logfilename.txt>\n\n"
+	    "Options:\n"
+	    "   --help                 This page\n"
+	    "   --index <num>          Choose which log from the file should be rendered\n"
+	    "   --width <px>           Choose the width of the image (default %d)\n"
+	    "   --height <px>          Choose the height of the image (default %d)\n"
+	    "   --fps                  FPS of the resulting video (default %d)\n"
+	    "   --mode <mode>          Stick Mode (1-4)\n"
+	    "   --threads              Number of threads to use to render frames (default %d)\n"
+	    "   --prefix <filename>    Set the prefix of the output frame filenames\n"
+	    "   --start <x:xx>         Begin the log at this time offset (default 0:00)\n"
+	    "   --end <x:xx>           End the log at this time offset\n"
+	    "   --[no-]draw-pid-table  Show table with PIDs and gyros (default on)\n"
+	    "   --[no-]draw-craft      Show craft drawing (default on)\n"
+	    "   --[no-]draw-sticks     Show RC command sticks (default on)\n"
+	    "   --[no-]draw-time       Show frame number and time in bottom right (default on)\n"
+	    "   --[no-]plot-motor      Draw motors on the upper graph (default on)\n"
+	    "   --[no-]plot-pid        Draw PIDs on the lower graph (default off)\n"
+	    "   --[no-]plot-gyro       Draw gyroscopes on the lower graph (default on)\n"
+	    "   --smoothing-pid <n>    Smoothing window for the PIDs (default %d)\n"
+	    "   --smoothing-gyro <n>   Smoothing window for the gyroscopes (default %d)\n"
+	    "   --smoothing-motor <n>  Smoothing window for the motors (default %d)\n"
+	    "   --unit-gyro <raw|degree>  Unit for the gyro values in the table (default %s)\n"
+	    "   --prop-style <name>    Style of propeller display (pie/blades, default %s)\n"
+	    "   --gapless              Fill in gaps in the log with straight lines\n"
+	    "   --raw-amperage         Print the current sensor ADC value along with computed amperage\n"
+	    "\n", argv0, defaultOptions.imageWidth, defaultOptions.imageHeight, defaultOptions.fps, defaultOptions.threads,
             defaultOptions.pidSmoothing, defaultOptions.gyroSmoothing, defaultOptions.motorSmoothing,
             UNIT_NAME[defaultOptions.gyroUnit], PROP_STYLE_NAME[defaultOptions.propStyle]
-    );
+	    );
 }
 
 /**
@@ -1433,7 +1463,8 @@ void parseCommandlineOptions(int argc, char **argv)
         SETTING_SMOOTHING_MOTOR,
         SETTING_UNIT_GYRO,
         SETTING_PROP_STYLE,
-        SETTING_THREADS
+        SETTING_THREADS,
+	SETTING_MODE
     };
 
     memcpy(&options, &defaultOptions, sizeof(options));
@@ -1446,6 +1477,7 @@ void parseCommandlineOptions(int argc, char **argv)
             {"width", required_argument, 0, SETTING_WIDTH},
             {"height", required_argument, 0, SETTING_HEIGHT},
             {"fps", required_argument, 0, SETTING_FPS},
+            {"mode", required_argument, 0, SETTING_MODE},
             {"prefix", required_argument, 0, SETTING_PREFIX},
             {"start", required_argument, 0, SETTING_START},
             {"end", required_argument, 0, SETTING_END},
@@ -1502,6 +1534,14 @@ void parseCommandlineOptions(int argc, char **argv)
             break;
             case SETTING_FPS:
                 options.fps = atoi(optarg);
+            break;
+            case SETTING_MODE:
+                options.mode = atoi(optarg);
+		if(options.mode < 1 || options.mode > 4) {
+                    fprintf(stderr, "Invalid stick mode (1-4)\n");
+                    exit(-1);
+		}
+		options.mode -= 1;
             break;
             case SETTING_PREFIX:
                 options.outputPrefix = optarg;
