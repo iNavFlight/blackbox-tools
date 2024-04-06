@@ -120,6 +120,7 @@ Options:
    --width <px>           Choose the width of the image (default 1920)
    --height <px>          Choose the height of the image (default 1080)
    --fps                  FPS of the resulting video (default 30)
+   --mode <mode>          Stick Mode (1-4)
    --threads              Number of threads to use to render frames (default 3)
    --prefix <filename>    Set the prefix of the output frame filenames
    --start <x:xx>         Begin the log at this time offset (default 0:00)
