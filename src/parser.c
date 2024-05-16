@@ -549,25 +549,47 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
                 else
                     log->sysConfig.vbatType = TRANSITIONAL; // needs data check
             }
+	    if(major > 8) {
+		log->sysConfig.rcModes = INAV_V8;
+	    } else if (major < 8) {
+		log->sysConfig.rcModes = ORIGINAL;
+	    } else if (minor != 0 || micro != 0) {
+		log->sysConfig.rcModes = INAV_V8;
+	    } else {
+		log->sysConfig.rcModes = TRANSITIONAL;
+	    }
             log->sysConfig.firmwareRevison = FIRMWARE_REVISON_INAV;
         }
         else
             log->sysConfig.firmwareRevison = FIRMWARE_REVISON_UNKNOWN;
 
-    } else if (strcmp(fieldName, "Firmware date") == 0 && log->sysConfig.vbatType == TRANSITIONAL) {
-        // This stanz is only necessary for 2.0.0 RC2, RC1 and prior development builds
+    } else if (strcmp(fieldName, "Firmware date") == 0) {
         int day = atoi(fieldValue+4);
         int yr = atoi(fieldValue+7);
-        if (yr == 2018)
-        {
-            if(strncmp(fieldValue,"Apr", 3) == 0 ||
-               strncmp(fieldValue,"May", 3) == 0 ||
-               strncmp(fieldValue,"Jun", 3) == 0 ||
-               (strncmp(fieldValue,"Jul", 3) == 0 && day < 8))
-                log->sysConfig.vbatType = ORIGINAL;
-            else
-                log->sysConfig.vbatType = INAV_V2;
-        }
+	if (log->sysConfig.vbatType == TRANSITIONAL) {
+        // This stanz is only necessary for 2.0.0 RC2, RC1 and prior development builds
+	    if (yr == 2018) {
+		if(strncmp(fieldValue,"Apr", 3) == 0 ||
+		   strncmp(fieldValue,"May", 3) == 0 ||
+		   strncmp(fieldValue,"Jun", 3) == 0 ||
+		   (strncmp(fieldValue,"Jul", 3) == 0 && day < 8))
+		    log->sysConfig.vbatType = ORIGINAL;
+		else
+		    log->sysConfig.vbatType = INAV_V2;
+	    }
+	}
+	if (log->sysConfig.rcModes == TRANSITIONAL) {
+	    if(yr == 2024) {
+		if(strncmp(fieldValue,"Jan", 3) == 0 ||
+		   strncmp(fieldValue,"Feb", 3) == 0 ||
+		   strncmp(fieldValue,"Mar", 3) == 0 ||
+		   strncmp(fieldValue,"Apr", 3) == 0 ||
+		   (strncmp(fieldValue,"May", 3) == 0 && day < 16))
+		    log->sysConfig.rcModes = ORIGINAL;
+		else
+		    log->sysConfig.rcModes = INAV_V8;
+	    }
+	}
     }
     else if (strcmp(fieldName, "Log start datetime") == 0) {
 	log->sysConfig.logStartTime = get_utc_time(fieldValue);
@@ -1089,9 +1111,13 @@ void flightlogFlightModeToString(flightLog_t *log, uint64_t flightMode, char *de
 {
     if (log->sysConfig.firmwareType == FIRMWARE_TYPE_CLEANFLIGHT)
     {
-        if (log->sysConfig.firmwareRevison == FIRMWARE_REVISON_INAV)
-            flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_INAV, dest, destLen);
-        else
+        if (log->sysConfig.firmwareRevison == FIRMWARE_REVISON_INAV) {
+	    if (log->sysConfig.rcModes == INAV_V8) {
+		flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_INAV, dest, destLen);
+	    } else {
+		flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_INAV_LEGACY, dest, destLen);
+	    }
+	} else
             flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_BETAFLIGHT, dest, destLen);
     }
 }
