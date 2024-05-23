@@ -35,7 +35,9 @@ def process_enums wanted,have,enums
 
     puts "/* #{have} */"
     processed.each_with_index do |l,j|
-      next if l.nil?
+      if l.nil?
+        l = "**REMOVED**"
+      end
       case have
       when 'boxId_e'
         l = l.sub(/^BOX/,'')
