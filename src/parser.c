@@ -584,7 +584,7 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
 		   strncmp(fieldValue,"Feb", 3) == 0 ||
 		   strncmp(fieldValue,"Mar", 3) == 0 ||
 		   strncmp(fieldValue,"Apr", 3) == 0 ||
-		   (strncmp(fieldValue,"May", 3) == 0 && day < 16))
+		   (strncmp(fieldValue,"May", 3) == 0 && day < 23))
 		    log->sysConfig.rcModes = ORIGINAL;
 		else
 		    log->sysConfig.rcModes = INAV_V8;

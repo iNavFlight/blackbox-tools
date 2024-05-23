@@ -130,61 +130,7 @@ const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV_LEGACY[] = {
 
 // INAV HEADER: src/main/fc/rc_modes.h : boxId_e
 const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[] = {
-    "ARM",		// 0
-    "ANGLE",		// 1
-    "HORIZON",		// 2
-    "ANGLEHOLD",	// 3
-    "MANUAL",		// 4
-    "NAVALTHOLD",	// 5
-    "HEADINGHOLD",	// 6
-    "NAVPOSHOLD",	// 7
-    "NAVCOURSEHOLD",	// 8
-    "NAVCRUISE",	// 9
-    "NAVRTH",		// 10
-    "NAVWP",		// 11
-    "NAVLAUNCH",	// 12
-    "SOARING",		// 13
-    "FAILSAFE",		// 14
-    "AUTOLEVEL",	// 15
-    "HEADFREE",		// 16
-    "HEADADJ",		// 17
-    "CAMSTAB",		// 18
-    "BEEPERON",		// 19
-    "AUTOTRIM",		// 20
-    "AUTOTUNE",		// 21
-    "OSD",		// 22
-    "TELEMETRY",	// 23
-    "BLACKBOX",		// 24
-    "AIRMODE",		// 25
-    "HOMERESET",	// 26
-    "GCSNAV",		// 27
-    "SURFACE",		// 28
-    "FLAPERON",		// 29
-    "TURNASSIST",	// 30
-    "BRAKING",		// 31
-    "LIGHTS",		// 32
-    "CAMERA1",		// 33
-    "CAMERA2",		// 34
-    "CAMERA3",		// 35
-    "OSDALT1",		// 36
-    "OSDALT2",		// 37
-    "OSDALT3",		// 38
-    "LEDLOW",		// 39
-    "USER1",		// 40
-    "USER2",		// 41
-    "USER3",		// 42
-    "USER4",		// 43
-    "FPVANGLEMIX",	// 44
-    "LOITERDIRCHN",	// 45
-    "MSPRCOVERRIDE",	// 46
-    "PREARM",		// 47
-    "TURTLE",		// 48
-    "PLANWPMISSION",	// 49
-    "CHANGEMISSION",	// 50
-    "BEEPERMUTE",	// 51
-    "MULTIFUNCTION",	// 52
-    "MIXERPROFILE",	// 53
-    "MIXERTRANSITION",	// 54
+
     NULL
 };
 
