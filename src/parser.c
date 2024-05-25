@@ -578,6 +578,9 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
 		    log->sysConfig.vbatType = INAV_V2;
 	    }
 	}
+	// rcModes changed 2024-05-24
+	// v8.0.0 set 2023-12-09
+
 	if (log->sysConfig.rcModes == TRANSITIONAL) {
 	    if(yr == 2024) {
 		if(strncmp(fieldValue,"Jan", 3) == 0 ||
@@ -588,6 +591,10 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
 		    log->sysConfig.rcModes = ORIGINAL;
 		else
 		    log->sysConfig.rcModes = INAV_V8;
+	    } else if (yr > 2024) {
+		log->sysConfig.rcModes = INAV_V8;
+	    } else {
+		log->sysConfig.rcModes = ORIGINAL;
 	    }
 	}
     }
