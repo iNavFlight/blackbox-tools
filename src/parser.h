@@ -102,6 +102,7 @@ typedef struct gpsHFieldIndexes_t {
 
 typedef struct slowFieldIndexes_t {
     int flightModeFlags;
+    int flightModeFlags2;
     int stateFlags;
     int failsafePhase;
 } slowFieldIndexes_t;

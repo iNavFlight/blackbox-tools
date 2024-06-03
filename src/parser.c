@@ -321,6 +321,8 @@ static void identifySlowFields(flightLog_t *log, flightLogFrameDef_t *frameDef)
 
         if (strcmp(fieldName, "flightModeFlags") == 0) {
             log->slowFieldIndexes.flightModeFlags = i;
+        } else if (strcmp(fieldName, "flightModeFlags2") == 0) {
+            log->slowFieldIndexes.flightModeFlags2 = i;
         } else if (strcmp(fieldName, "stateFlags") == 0) {
             log->slowFieldIndexes.stateFlags = i;
         } else if (strcmp(fieldName, "failsafePhase") == 0) {
@@ -1188,6 +1190,8 @@ flightLog_t * flightLogCreate(int fd)
 
         return 0;
     }
+
+    log->slowFieldIndexes.flightModeFlags2 = -1;
 
     //First check how many logs are in this one file (each time the FC is rearmed, a new log is appended)
     logSearchStart = private->stream->data;
