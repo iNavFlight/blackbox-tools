@@ -98,6 +98,7 @@ typedef enum FlightLogFieldSign {
 extern const char * const FLIGHT_LOG_FLIGHT_MODE_NAME[];
 extern const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_BETAFLIGHT[];
 extern const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[];
+extern const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV_LEGACY[];
 
 extern const char * const FLIGHT_LOG_FLIGHT_STATE_NAME[];
 extern const char * const FLIGHT_LOG_FLIGHT_STATE_NAME_INAV[];

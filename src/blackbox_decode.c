@@ -376,6 +376,10 @@ void outputFieldNamesHeader(FILE *file, flightLogFrameDef_t *frame, Unit *fieldU
         if (skipTime && strcmp(frame->fieldName[i], "time") == 0)
             continue;
 
+	// not output, as it's merged with "flightModeFlags"
+        if (strcmp(frame->fieldName[i], "flightModeFlags2") == 0)
+            continue;
+
         if (needComma) {
             fprintf(file, CSV_SEP);
         } else {
@@ -563,31 +567,36 @@ void outputSlowFrameFields(flightLog_t *log, int64_t *frame)
     bool needComma = false;
 
     for (int i = 0; i < log->frameDefs['S'].fieldCount; i++) {
-        if (needComma) {
+	if (i == log->slowFieldIndexes.flightModeFlags2)
+	    continue; // merged with flightModeFlags
+
+	if (needComma) {
             fprintf(csvFile, CSV_SEP);
         } else {
             needComma = true;
         }
 
-        if ((i == log->slowFieldIndexes.flightModeFlags || i == log->slowFieldIndexes.stateFlags)
-                && options.unitFlags == UNIT_FLAGS) {
+	uint64_t modeval = frame[i];
+	if (i == log->slowFieldIndexes.flightModeFlags && log->slowFieldIndexes.flightModeFlags2 != -1) {
+	    modeval |= (frame[log->slowFieldIndexes.flightModeFlags2] << 32);
+	}
 
+        if ((i == log->slowFieldIndexes.flightModeFlags ||  i == log->slowFieldIndexes.stateFlags) && options.unitFlags == UNIT_FLAGS) {
             if (i == log->slowFieldIndexes.flightModeFlags) {
-                flightlogFlightModeToString(log, frame[i], buffer, BUFFER_LEN);
+		flightlogFlightModeToString(log, modeval, buffer, BUFFER_LEN);
             } else {
-                flightlogFlightStateToString(log, frame[i], buffer, BUFFER_LEN);
+                flightlogFlightStateToString(log, modeval, buffer, BUFFER_LEN);
             }
-
             fprintf(csvFile, "%s", buffer);
         } else if (i == log->slowFieldIndexes.failsafePhase && options.unitFlags == UNIT_FLAGS) {
-            flightlogFailsafePhaseToString(frame[i], buffer, BUFFER_LEN);
+            flightlogFailsafePhaseToString(modeval, buffer, BUFFER_LEN);
 
             fprintf(csvFile, "%s", buffer);
         } else if (log->frameDefs['S'].fieldSigned[i]) {
-            fprintf(csvFile, "%" PRId64, (uint64_t)frame[i]);
+            fprintf(csvFile, "%" PRId64, modeval);
         } else {
             //Print raw
-            fprintf(csvFile, "%" PRIu64, (uint64_t) frame[i]);
+            fprintf(csvFile, "%" PRIu64, modeval);
         }
     }
 }
