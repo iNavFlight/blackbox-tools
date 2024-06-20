@@ -151,12 +151,12 @@ const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[] = {
     "FAILSAFE",		// 18
     "NAVWP",		// 19
     "AIRMODE",		// 20
-    "HOMERESET",		// 21
+    "HOMERESET",	// 21
     "GCSNAV",		// 22
-    "**REMOVED**",		// 23
+    "**REMOVED**",	// 23
     "SURFACE",		// 24
     "FLAPERON",		// 25
-    "TURNASSIST",		// 26
+    "TURNASSIST",	// 26
     "AUTOTRIM",		// 27
     "AUTOTUNE",		// 28
     "CAMERA1",		// 29
@@ -165,27 +165,31 @@ const char * const FLIGHT_LOG_FLIGHT_MODE_NAME_INAV[] = {
     "OSDALT1",		// 32
     "OSDALT2",		// 33
     "OSDALT3",		// 34
-    "NAVCOURSEHOLD",		// 35
+    "NAVCOURSEHOLD",	// 35
     "BRAKING",		// 36
     "USER1",		// 37
     "USER2",		// 38
-    "FPVANGLEMIX",		// 39
-    "LOITERDIRCHN",		// 40
-    "MSPRCOVERRIDE",		// 41
+    "FPVANGLEMIX",	// 39
+    "LOITERDIRCHN",	// 40
+    "MSPRCOVERRIDE",	// 41
     "PREARM",		// 42
     "TURTLE",		// 43
-    "NAVCRUISE",		// 44
-    "AUTOLEVEL",		// 45
-    "PLANWPMISSION",		// 46
+    "NAVCRUISE",	// 44
+    "AUTOLEVEL",	// 45
+    "PLANWPMISSION",	// 46
     "SOARING",		// 47
     "USER3",		// 48
     "USER4",		// 49
-    "CHANGEMISSION",		// 50
-    "BEEPERMUTE",		// 51
-    "MULTIFUNCTION",		// 52
-    "MIXERPROFILE",		// 53
-    "MIXERTRANSITION",		// 54
-    "ANGLEHOLD",		// 55
+    "CHANGEMISSION",	// 50
+    "BEEPERMUTE",	// 51
+    "MULTIFUNCTION",	// 52
+    "MIXERPROFILE",	// 53
+    "MIXERTRANSITION",	// 54
+    "ANGLEHOLD",	// 55
+    "GIMBALTLOCK", 	// 56,
+    "GIMBALRLOCK", 	// 57
+    "GIMBALCENTER", 	// 58
+    "GIMBALHTRK",	// 59
     NULL
 };
 
