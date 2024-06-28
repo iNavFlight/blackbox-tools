@@ -4,13 +4,19 @@
 #include "gpxwriter.h"
 #include "platform.h"
 
+extern char* get_bb_version(bool);
+
 #define GPS_DEGREES_DIVIDER 10000000L
 
 static const char GPX_FILE_HEADER[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    "<gpx creator=\"Blackbox flight data recorder\" version=\"1.1\" xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""
+    "<gpx creator=\"blackbox_decode v%s\" version=\"1.1\" xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""
         " xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n"
-    "<metadata><name>Blackbox flight log</name></metadata>\n";
+    "<metadata><name>Blackbox flight log</name>\n"
+    " <link href=\"https://github.com/iNavFlight/blackbox-tools\">\n"
+    " <text>INAV Blackbox Tools</text>\n"
+    " </link>\n"
+    "</metadata>\n";
 
 static const char GPX_FILE_TRAILER[] =
     "</gpx>";
@@ -19,7 +25,7 @@ void gpxWriterAddPreamble(gpxWriter_t *gpx)
 {
     gpx->file = fopen(gpx->filename, "wb");
 
-    fprintf(gpx->file, GPX_FILE_HEADER);
+    fprintf(gpx->file, GPX_FILE_HEADER, get_bb_version(true));
 }
 
 /**
