@@ -112,7 +112,7 @@ static int64_t bufferedGPSFrame[FLIGHT_LOG_MAX_FIELDS];
 
 static seriesStats_t looptimeStats;
 
-static char* get_bb_version(bool for_inav) {
+char* get_bb_version(bool for_inav) {
     static char verstr[64]="";
 #ifndef BBLTOOLS_VERSION
 #define BBLTOOLS_VERSION 0.0.0
