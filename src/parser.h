@@ -17,7 +17,7 @@
 #define FLIGHT_LOG_FIELD_INDEX_TIME 1
 
 #define FLIGHT_LOG_MAX_MOTORS 8
-#define FLIGHT_LOG_MAX_SERVOS 16
+#define FLIGHT_LOG_MAX_SERVOS 18
 
 typedef enum FirmwareType {
     FIRMWARE_TYPE_UNKNOWN = 0,
