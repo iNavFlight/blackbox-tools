@@ -39,8 +39,8 @@
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
-#define MAX_MOTORS 8
-#define MAX_SERVOS 16
+#define MAX_MOTORS FLIGHT_LOG_MAX_MOTORS
+#define MAX_SERVOS FLIGHT_LOG_MAX_SERVOS
 
 //Controls how fast the props spin on the video
 #define MOTOR_MAX_RPS 25
