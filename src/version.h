@@ -1,4 +1,4 @@
-#define BBLTOOLS_VERSION 7.1.2 +rcmodes8
+#define BBLTOOLS_VERSION 7.99.0
 
 #ifdef BLACKBOX_VERSION
  #undef BBLTOOLS_VERSION
