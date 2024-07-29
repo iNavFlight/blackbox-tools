@@ -36,6 +36,11 @@
 //Likewise for iteration count
 #define MAXIMUM_ITERATION_JUMP_BETWEEN_FRAMES (500 * 10)
 
+// 2018-07-08 00:00:00
+#define VBAT_TRANSITION_EPOCH 1531004400
+// 2024-05-23T11:19:30+0100
+#define RCMODES_TRANSITION_EPOCH 1716459570
+
 typedef enum ParserState
 {
     PARSER_STATE_HEADER = 0,
@@ -316,6 +321,8 @@ static void identifySlowFields(flightLog_t *log, flightLogFrameDef_t *frameDef)
 
         if (strcmp(fieldName, "flightModeFlags") == 0) {
             log->slowFieldIndexes.flightModeFlags = i;
+        } else if (strcmp(fieldName, "flightModeFlags2") == 0) {
+            log->slowFieldIndexes.flightModeFlags2 = i;
         } else if (strcmp(fieldName, "stateFlags") == 0) {
             log->slowFieldIndexes.stateFlags = i;
         } else if (strcmp(fieldName, "failsafePhase") == 0) {
@@ -349,9 +356,6 @@ static int64_t get_utc_time(char *str) {
     double fracsec;
     char *ep = NULL;
 
-    putenv("TZ=UTC0");
-    tzset();
-
     tm.tm_year = atoi(str + 2) + 100;
     tm.tm_mon = atoi(str + 5) - 1;
     tm.tm_mday = atoi(str + 8);
@@ -378,6 +382,30 @@ static int64_t get_utc_time(char *str) {
     int64_t usec = (fracsec-(int)fracsec)*US_PER_SEC;
     utime += usec;
     return utime;
+}
+
+static time_t parse_firmware_date(char *str) {
+    // 01234567890123456789
+    // Mar 27 2024 13:41:48
+
+    struct tm tm = {0};
+
+    static const char* monthnames[] = {
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+    tm.tm_mon = -1;
+    for(int i = 0; i < 12; i++) {
+	if(strncmp(str, monthnames[i], 3) == 0) {
+	    tm.tm_mon = i;
+	    break;
+	}
+    }
+    tm.tm_mday = atoi(str+4);
+    tm.tm_year = atoi(str+7) - 1900;
+    tm.tm_hour = atoi(str+12);
+    tm.tm_min = atoi(str+15);
+    tm.tm_sec = atoi(str+15);
+    return mktime(&tm);
 }
 
 static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
@@ -549,25 +577,37 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
                 else
                     log->sysConfig.vbatType = TRANSITIONAL; // needs data check
             }
+	    if(major > 8) {
+		log->sysConfig.rcModes = INAV_V8;
+	    } else if (major < 8) {
+		log->sysConfig.rcModes = ORIGINAL;
+	    } else if (minor != 0 || micro != 0) {
+		log->sysConfig.rcModes = INAV_V8;
+	    } else {
+		log->sysConfig.rcModes = TRANSITIONAL;
+	    }
             log->sysConfig.firmwareRevison = FIRMWARE_REVISON_INAV;
         }
         else
             log->sysConfig.firmwareRevison = FIRMWARE_REVISON_UNKNOWN;
 
-    } else if (strcmp(fieldName, "Firmware date") == 0 && log->sysConfig.vbatType == TRANSITIONAL) {
+    } else if (strcmp(fieldName, "Firmware date") == 0) {
+	time_t fwtime = parse_firmware_date(fieldValue);
+	if (log->sysConfig.vbatType == TRANSITIONAL) {
         // This stanz is only necessary for 2.0.0 RC2, RC1 and prior development builds
-        int day = atoi(fieldValue+4);
-        int yr = atoi(fieldValue+7);
-        if (yr == 2018)
-        {
-            if(strncmp(fieldValue,"Apr", 3) == 0 ||
-               strncmp(fieldValue,"May", 3) == 0 ||
-               strncmp(fieldValue,"Jun", 3) == 0 ||
-               (strncmp(fieldValue,"Jul", 3) == 0 && day < 8))
-                log->sysConfig.vbatType = ORIGINAL;
-            else
-                log->sysConfig.vbatType = INAV_V2;
-        }
+	    // time_t 1531004400 -- 2018-07-08 00:00:00
+	    if (fwtime < VBAT_TRANSITION_EPOCH)
+		log->sysConfig.vbatType = ORIGINAL;
+	    else
+		log->sysConfig.vbatType = INAV_V2;
+	}
+	// rcModes changed 2024-05-24, v8.0.0 set 2023-12-09
+	if (log->sysConfig.rcModes == TRANSITIONAL) {
+	    if(fwtime < RCMODES_TRANSITION_EPOCH)
+		log->sysConfig.rcModes = ORIGINAL;
+	    else
+		log->sysConfig.rcModes = INAV_V8;
+	}
     }
     else if (strcmp(fieldName, "Log start datetime") == 0) {
 	log->sysConfig.logStartTime = get_utc_time(fieldValue);
@@ -1089,9 +1129,13 @@ void flightlogFlightModeToString(flightLog_t *log, uint64_t flightMode, char *de
 {
     if (log->sysConfig.firmwareType == FIRMWARE_TYPE_CLEANFLIGHT)
     {
-        if (log->sysConfig.firmwareRevison == FIRMWARE_REVISON_INAV)
-            flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_INAV, dest, destLen);
-        else
+        if (log->sysConfig.firmwareRevison == FIRMWARE_REVISON_INAV) {
+	    if (log->sysConfig.rcModes == INAV_V8) {
+		flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_INAV, dest, destLen);
+	    } else {
+		flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_INAV_LEGACY, dest, destLen);
+	    }
+	} else
             flightlogDecodeFlagsToString(flightMode, FLIGHT_LOG_FLIGHT_MODE_NAME_BETAFLIGHT, dest, destLen);
     }
 }
@@ -1146,6 +1190,8 @@ flightLog_t * flightLogCreate(int fd)
 
         return 0;
     }
+
+    log->slowFieldIndexes.flightModeFlags2 = -1;
 
     //First check how many logs are in this one file (each time the FC is rearmed, a new log is appended)
     logSearchStart = private->stream->data;
@@ -1504,6 +1550,10 @@ bool flightLogParse(flightLog_t *log, int logIndex, FlightLogMetadataReady onMet
     private->stream->pos = private->stream->start;
     private->stream->end = log->logBegin[logIndex + 1];
     private->stream->eof = false;
+
+    // Force UTC for time base
+    putenv("TZ=UTC0");
+    tzset();
 
     while (1) {
         int command = streamReadByte(private->stream);

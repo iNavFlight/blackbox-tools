@@ -17,7 +17,7 @@
 #define FLIGHT_LOG_FIELD_INDEX_TIME 1
 
 #define FLIGHT_LOG_MAX_MOTORS 8
-#define FLIGHT_LOG_MAX_SERVOS 16
+#define FLIGHT_LOG_MAX_SERVOS 18
 
 typedef enum FirmwareType {
     FIRMWARE_TYPE_UNKNOWN = 0,
@@ -31,11 +31,12 @@ typedef enum FirmwareRevison {
     FIRMWARE_REVISON_INAV,
 } FirmwareRevison;
 
-typedef enum VbatType {
+typedef enum SomeVersionType {
     ORIGINAL = 0,
     TRANSITIONAL,
-    INAV_V2
-} VbatType;
+    INAV_V2,
+    INAV_V8
+} SomeVersionType;
 
 // These items have existed since pre 1.0
 typedef enum ParserMetaData {
@@ -101,6 +102,7 @@ typedef struct gpsHFieldIndexes_t {
 
 typedef struct slowFieldIndexes_t {
     int flightModeFlags;
+    int flightModeFlags2;
     int stateFlags;
     int failsafePhase;
 } slowFieldIndexes_t;
@@ -151,7 +153,8 @@ typedef struct flightLogSysConfig_t {
     FirmwareType firmwareType;
     FirmwareRevison firmwareRevison;
 
-    VbatType vbatType;
+    SomeVersionType vbatType;
+    SomeVersionType rcModes;
 
     int64_t logStartTime;
     ParserMetaData metafound;
