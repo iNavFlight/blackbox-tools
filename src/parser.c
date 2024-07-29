@@ -190,7 +190,6 @@ static void identifyMainFields(flightLog_t *log, flightLogFrameDef_t *frameDef)
 
         if (startsWith(fieldName, "motor[")) {
             int motorIndex = atoi(fieldName + strlen("motor["));
-
             if (motorIndex >= 0 && motorIndex < FLIGHT_LOG_MAX_MOTORS) {
                 log->mainFieldIndexes.motor[motorIndex] = fieldIndex;
             }
@@ -231,9 +230,10 @@ static void identifyMainFields(flightLog_t *log, flightLogFrameDef_t *frameDef)
 
             log->mainFieldIndexes.accSmooth[axisIndex] = fieldIndex;
         } else if (startsWith(fieldName, "servo[")) {
-            int servoIndex = atoi(fieldName + strlen("servo["));
-
-            log->mainFieldIndexes.servo[servoIndex] = fieldIndex;
+	    int servoIndex = atoi(fieldName + strlen("servo["));
+            if (servoIndex >= 0 && servoIndex < FLIGHT_LOG_MAX_SERVOS) {
+		log->mainFieldIndexes.servo[servoIndex] = fieldIndex;
+	    }
         } else if (strcmp(fieldName, "vbatLatest") == 0) {
             log->mainFieldIndexes.vbatLatest = fieldIndex;
         } else if (strcmp(fieldName, "vbat") == 0) {
