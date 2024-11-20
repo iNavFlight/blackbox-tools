@@ -6,7 +6,7 @@
 
 These tools allow you to convert flight data logs recorded by INAV's Blackbox feature into CSV files (comma-separated values) for analysis, or into a series of PNG files which you could turn into a video.
 
-You can download the latest executable versions of these tools for x86_64 on Linux, MacOS or Windows (x86_64 and ia-32) from the "releases" tab above. If you're running Linux on ARM or RISCV or FreeBSD, you can build the tools from source (instructions are further down this page).
+You can download the latest executable versions of these tools for x86_64 on Linux, MacOS or Windows (x86_64 and ia-32) from the "releases" tab above. If you're running Linux on ARM or RISCV or FreeBSD or MacOS aarch64, you can build the tools from source (instructions are further down this page).
 
 ## Using the blackbox_decode tool
 
@@ -214,32 +214,9 @@ Note: These instructions need validating.
 
 The easiest way to build is to install the [Xcode development tool][], then install an environment like [Homebrew][] or [MacPorts][] onto your system.
 
-From MacPorts, you would do this to get LibCairo:
+From MacPorts / Homebrew you need to install `cairo`.
 
-```bash
-sudo port selfupdate
-sudo port install cairo
-```
-
-Afterwards you can run `make` to build blackbox_render.
-
-If you are using Homebrew instead of MacPorts, run:
-
-```bash
-brew install cairo --without-x11 pkg-config
-```
-
-Afterwards you can run `make` to build blackbox_render.
-
-If you get an error "Package 'xcb-shm', required by 'cairo', not found", your installed version of Cairo depends on X11 but your Homebrew X11 libraries are not on your pkgconfig path, so the build process cannot find them. Try this to add them to your path:
-
-```bash
-$ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/opt/X11/lib/pkgconfig
-```
-
-[Xcode development tool]: https://itunes.apple.com/us/app/xcode/id497799835
-[Homebrew]: http://brew.sh/
-[MacPorts]: https://www.macports.org/
+Then you can run `make` to build blackbox_render.
 
 MacOS `blacbox_decode` can also be cross-compiled on Linux using the supplied `Makefile`.
 

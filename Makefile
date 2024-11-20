@@ -84,20 +84,14 @@ CFLAGS		= $(ARCH_FLAGS) \
 
 # Supports native builds on
 # * Linux,FreeBSD (system dynamic libraries)
-# * MacOS, blackbox_render is statically linked unless MACDYN is set
-#   (make MACDYN=1); in which case, you need to supply cairo and
+# * MacOS,
+#   you need to supply cairo and
 #   freetype2 and dependencies, e.g. via `homebrew`
 #   MacOS blackbox_decode can be cross-compiled on Linux.
 # * Windows via mingw32 hosted on Linux
 
 SYSTGT := $(shell $(CC) -dumpmachine)
-ifneq (, $(findstring darwin, $(SYSTGT)))
- ifndef MACDYN
-  RENDER_LDFLAGS = -Llib/macosx -lcairo -lpixman-1 -lpng16 -lz -lfreetype -lbz2
- else
-  RENDER_LDFLAGS = `pkg-config --libs cairo` `pkg-config --libs freetype2`
- endif
-else ifneq (, $(findstring Msys, $(SYSTGT)))
+ifneq (, $(findstring Msys, $(SYSTGT)))
  RENDER_LDFLAGS = -Llib/win32/ -lcairo-2 -lfontconfig-1 -lfreetype-6 -liconv-2 -llzma-5 -lpixman-1-0 -lpng15-15 -lxml2-2 -lzlib1
 else ifneq (, $(findstring i686-w64-mingw32, $(SYSTGT)))
  RENDER_LDFLAGS = -Llib/win32/ -lcairo-2 -lfontconfig-1 -lfreetype-6 -liconv-2 -llzma-5 -lpixman-1-0 -lpng15-15 -lxml2-2 -lzlib1
