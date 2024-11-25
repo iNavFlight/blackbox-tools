@@ -529,6 +529,28 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 }
 
+void computeThrottle(flightLog_t* log, int64_t* frame, uint8_t frameType)
+{
+  if (frame && frameType == 'I' && options.throttle > 1)
+  {
+    int64_t rcThrottle = frame[log->mainFieldIndexes.rcCommand[3]];
+    if (rcThrottle <= log->sysConfig.minthrottle)
+    {
+      frame[options.throttle] = 0;
+    }
+    else if (rcThrottle >= log->sysConfig.maxthrottle)
+    {
+      frame[options.throttle] = 100;
+    }
+    else
+    {
+      int64_t a = log->sysConfig.maxthrottle - log->sysConfig.minthrottle;
+      int64_t b = rcThrottle - log->sysConfig.minthrottle;
+      frame[options.throttle] = b * 100 / a;
+    }
+  }
+}
+
 void computeDistance(flightLog_t* log, int64_t* frame, uint8_t frameType)
 {
   if (frame && frameType == 'G' && options.distance > 1)
@@ -812,13 +834,18 @@ void onFrameReadyMerge(flightLog_t *log, bool frameValid, int64_t *frame, uint8_
                     bufferedFrameTime = -1;
                 }
             }
-        break;
+            if (frameValid) {
+                computeThrottle(log, frame, frameType);
+            }
+            break;
     }
 }
 
 void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t frameType, int fieldCount, int frameOffset, int frameSize)
 {
-    computeDistance(log, frame, frameType);
+    if (frameValid) {
+        computeDistance(log, frame, frameType);
+    }
 
     if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
         //Use the alternate frame processing routine which merges main stream data and GPS data together
@@ -874,24 +901,8 @@ void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t fra
                     fprintf(csvFile, "Failed to decode %c frame, offset %d, size %d\n", (char) frameType, frameOffset, frameSize);
                 }
             }
-            if (frame && frameType == 'I' && options.throttle > 1)
-            {
-              //int i = log->mainFieldIndexes.Throttle;
-              int64_t rcThrottle = frame[log->mainFieldIndexes.rcCommand[3]];
-              if (rcThrottle <= log->sysConfig.minthrottle)
-              {
-                frame[options.throttle] = 0;
-              }
-              else if (rcThrottle >= log->sysConfig.maxthrottle)
-              {
-                frame[options.throttle] = 100;
-              }
-              else
-              {
-                int64_t a = log->sysConfig.maxthrottle - log->sysConfig.minthrottle;
-                int64_t b = rcThrottle - log->sysConfig.minthrottle;
-                frame[options.throttle] = b * 100 / a;
-              }
+            if (frameValid) {
+                computeThrottle(log, frame, frameType);
             }
         break;
     }
