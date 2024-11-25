@@ -529,44 +529,48 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 }
 
+void computeDistance(flightLog_t* log, int64_t* frame, uint8_t frameType)
+{
+  if (frame && frameType == 'G' && options.distance > 1)
+  {
+    static const double GPS_DEGREES_DIVIDER = 10000000.0;
+    static double home_latitude;
+    static double  home_longitude;
+    static double home_altitude;
+    static bool has_home = false;
+
+    double latitude = (double)frame[log->gpsFieldIndexes.GPS_coord[0]] / GPS_DEGREES_DIVIDER;
+    double longitude = (double)frame[log->gpsFieldIndexes.GPS_coord[1]] / GPS_DEGREES_DIVIDER;
+    double altitude = (double)frame[log->gpsFieldIndexes.GPS_altitude];
+
+    if (!has_home && frame[log->gpsFieldIndexes.GPS_numSat] >= MIN_GPS_SATELLITES) {
+      home_latitude = latitude;
+      home_longitude = longitude;
+      home_altitude = altitude;
+      has_home = true;
+    }
+
+    frame[options.distance] = 0;
+
+    if (has_home) {
+      // formule haversine
+      const double DEG2RAD = 3.14159265358979323846 / 180.0;
+      double dlong = fabs(longitude - home_longitude) * DEG2RAD;
+      double dlat = fabs(latitude - home_latitude) * DEG2RAD;
+      double a = pow(sin(dlat / 2.0), 2) + cos(home_latitude * DEG2RAD) * cos(latitude * DEG2RAD) * pow(sin(dlong / 2.0), 2);
+      double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+      double d = 6371000.0 * c;
+
+      // altitude
+      double delta_alt = fabs(altitude - home_altitude);
+      double dist = sqrt(pow(d, 2) + pow(delta_alt, 2));
+      frame[options.distance] = (int64_t)round(dist);
+    }
+  }
+}
+
 void outputGPSFrame(flightLog_t *log, int64_t *frame)
 {
-    if (options.distance > 1)
-    {
-      static const double GPS_DEGREES_DIVIDER = 10000000.0;
-      static double home_latitude;
-      static double  home_longitude;
-      static double home_altitude;
-      static bool has_home = false;
-
-      double latitude = (double)frame[log->gpsFieldIndexes.GPS_coord[0]] / GPS_DEGREES_DIVIDER;
-      double longitude = (double)frame[log->gpsFieldIndexes.GPS_coord[1]] / GPS_DEGREES_DIVIDER;
-      double altitude = (double)frame[log->gpsFieldIndexes.GPS_altitude];
-
-      if (!has_home && frame[log->gpsFieldIndexes.GPS_numSat] >= MIN_GPS_SATELLITES) {
-        home_latitude = latitude;
-        home_longitude = longitude;
-        home_altitude = altitude;
-        has_home = true;
-      }
-
-      frame[options.distance] = 0;
-
-      if (has_home) {
-        // formule haversine
-        const double DEG2RAD = 3.14159265358979323846 / 180.0;
-        double dlong = fabs(longitude - home_longitude) * DEG2RAD;
-        double dlat = fabs(latitude - home_latitude) * DEG2RAD;
-        double a = pow(sin(dlat / 2.0), 2) + cos(home_latitude * DEG2RAD) * cos(latitude * DEG2RAD) * pow(sin(dlong / 2.0), 2);
-        double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-        double d = 6371000.0 * c;
-
-        // altitude
-        double delta_alt = fabs(altitude - home_altitude);
-        double dist = sqrt(pow(d, 2) + pow(delta_alt, 2));
-        frame[options.distance] = (int64_t)round(dist);
-      }
-    }
   
     int64_t gpsFrameTime;
 
@@ -814,6 +818,8 @@ void onFrameReadyMerge(flightLog_t *log, bool frameValid, int64_t *frame, uint8_
 
 void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t frameType, int fieldCount, int frameOffset, int frameSize)
 {
+    computeDistance(log, frame, frameType);
+
     if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
         //Use the alternate frame processing routine which merges main stream data and GPS data together
         onFrameReadyMerge(log, frameValid, frame, frameType, fieldCount, frameOffset, frameSize);
