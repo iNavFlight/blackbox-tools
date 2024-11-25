@@ -45,6 +45,7 @@ typedef struct decodeOptions_t {
     int simulateCurrentMeter;
     int mergeGPS;
     int datetime;
+    int throttle;
     const char *outputPrefix;
 
     bool overrideSimCurrentMeterOffset, overrideSimCurrentMeterScale;
@@ -61,6 +62,7 @@ decodeOptions_t options = {
     .simulateCurrentMeter = false,
     .mergeGPS = 0,
     .datetime = 0,
+    .throttle = 0,
 
     .overrideSimCurrentMeterOffset = false,
     .overrideSimCurrentMeterScale = false,
@@ -266,6 +268,7 @@ static bool fprintfMainFieldInUnit(flightLog_t *log, FILE *file, int fieldIndex,
                 return true;
             }
         break;
+        case UNIT_PERCENT:
         case UNIT_RAW:
             if (log->frameDefs['I'].fieldSigned[fieldIndex] || options.raw) {
                 fprintf(file, "%d", (int32_t) fieldValue);
@@ -827,6 +830,25 @@ void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t fra
                     fprintf(csvFile, "Failed to decode %c frame, offset %d, size %d\n", (char) frameType, frameOffset, frameSize);
                 }
             }
+            if (frame && frameType == 'I' && options.throttle > 1)
+            {
+              //int i = log->mainFieldIndexes.Throttle;
+              int64_t rcThrottle = frame[log->mainFieldIndexes.rcCommand[3]];
+              if (rcThrottle <= log->sysConfig.minthrottle)
+              {
+                frame[options.throttle] = 0;
+              }
+              else if (rcThrottle >= log->sysConfig.maxthrottle)
+              {
+                frame[options.throttle] = 100;
+              }
+              else
+              {
+                int64_t a = log->sysConfig.maxthrottle - log->sysConfig.minthrottle;
+                int64_t b = rcThrottle - log->sysConfig.minthrottle;
+                frame[options.throttle] = b * 100 / a;
+              }
+            }
         break;
     }
 }
@@ -911,6 +933,10 @@ void applyFieldUnits(flightLog_t *log)
             }
         }
 
+        if (options.throttle > 1) {
+            mainFieldUnit[options.throttle] = UNIT_PERCENT;
+        }
+
         // Slow frame fields:
         if (log->slowFieldIndexes.flightModeFlags > -1) {
             slowFieldUnit[log->slowFieldIndexes.flightModeFlags] = options.unitFlags;
@@ -975,9 +1001,20 @@ void onMetadataReady(flightLog_t *log)
     if (log->frameDefs['I'].fieldCount == 0) {
         fprintf(stderr, "No fields found in log, is it missing its header?\n");
         return;
-    } else if (options.simulateIMU && (log->mainFieldIndexes.accSmooth[0] == -1 || log->mainFieldIndexes.gyroADC[0] == -1)){
+    } 
+    if (options.simulateIMU && (log->mainFieldIndexes.accSmooth[0] == -1 || log->mainFieldIndexes.gyroADC[0] == -1)){
         fprintf(stderr, "Can't simulate the IMU because accelerometer or gyroscope data is missing\n");
         options.simulateIMU = false;
+    }
+    bool hasThrottle = log->mainFieldIndexes.rcCommand[3] != -1;
+    if (options.throttle && hasThrottle)
+    {
+      int fieldIndex = log->frameDefs['I'].fieldCount;
+      log->frameDefs['I'].fieldName[fieldIndex] = "Throttle";
+      log->frameDefs['I'].predictor[fieldIndex] = FLIGHT_LOG_FIELD_PREDICTOR_0;
+      log->frameDefs['I'].encoding[fieldIndex] = FLIGHT_LOG_FIELD_ENCODING_NULL;
+      options.throttle = fieldIndex;
+      log->frameDefs['I'].fieldCount++;
     }
 
     identifyGPSFields(log);
@@ -1287,6 +1324,7 @@ void printUsage(const char *argv0)
         "   --limits                 Print the limits and range of each field\n"
         "   --stdout                 Write log to stdout instead of to a file\n"
         "   --datetime               Add a dateTime column with UTC date time\n"
+        "   --throttle               Add a Throttle column in percent (%)\n"
         "   --unit-amperage <unit>   Current meter unit (raw|mA|A), default is A (amps)\n"
         "   --unit-flags <unit>      State flags unit (raw|flags), default is flags\n"
         "   --unit-frame-time <unit> Frame timestamp unit (us|s), default is us (microseconds)\n"
@@ -1351,8 +1389,9 @@ void parseCommandlineOptions(int argc, char **argv)
             {"debug", no_argument, &options.debug, 1},
             {"limits", no_argument, &options.limits, 1},
             {"stdout", no_argument, &options.toStdout, 1},
-            { "merge-gps", no_argument, &options.mergeGPS, 1 },
-            { "datetime", no_argument, &options.datetime, 1 },
+            {"merge-gps", no_argument, &options.mergeGPS, 1 },
+            {"datetime", no_argument, &options.datetime, 1 },
+            {"throttle", no_argument, &options.throttle, 1 },
             {"simulate-imu", no_argument, &options.simulateIMU, 1},
             {"simulate-current-meter", no_argument, &options.simulateCurrentMeter, 1},
             {"imu-ignore-mag", no_argument, &options.imuIgnoreMag, 1},
