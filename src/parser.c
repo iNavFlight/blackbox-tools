@@ -611,6 +611,8 @@ static void parseHeaderLine(flightLog_t *log, mmapStream_t *stream)
     }
     else if (strcmp(fieldName, "Log start datetime") == 0) {
 	log->sysConfig.logStartTime = get_utc_time(fieldValue);
+    } else if  (strcmp(fieldName, "features") == 0) {
+        log->sysConfig.metafound |= (1 << haveMetaFeatures);
     }
 }
 

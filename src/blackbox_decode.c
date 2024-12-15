@@ -1106,6 +1106,8 @@ void printStats(flightLog_t *log, int logIndex, bool raw, bool limits)
         fprintf(stderr,"\nWARNING: Missing expected metadata - check for log corruption\n");
         if((log->sysConfig.metafound & (1<<haveMetaVBatRef)) == 0)
             fprintf(stderr,"\tWarning: No VBAT reference\n");
+        if((log->sysConfig.metafound & (1<<haveMetaFeatures)) == 0)
+            fprintf(stderr,"\tWarning: No Features reference\n");
         if((log->sysConfig.metafound&(1<<haveMetaFWType)) == 0)
             fprintf(stderr,"\tError: No Firmware type metadata\n");
         if((log->sysConfig.metafound&(1<<haveMetaFWRev)) == 0)

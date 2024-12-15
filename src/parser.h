@@ -45,6 +45,7 @@ typedef enum ParserMetaData {
     haveMetaFWRev,
     haveMetaPInterval,
     haveMetaAcc1G,
+    haveMetaFeatures, // INAV 1.2
     META_CHECKS_COUNT
 } ParserMetaData;
 
