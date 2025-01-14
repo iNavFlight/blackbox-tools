@@ -88,16 +88,10 @@ CFLAGS		= $(ARCH_FLAGS) \
 #   you need to supply cairo and
 #   freetype2 and dependencies, e.g. via `homebrew`
 #   MacOS blackbox_decode can be cross-compiled on Linux.
-# * Windows via mingw32 hosted on Linux
+# * Windows (via Msys2).
+#   Windows blackbox_decode can be cross-compiled on Linux.
 
-SYSTGT := $(shell $(CC) -dumpmachine)
-ifneq (, $(findstring Msys, $(SYSTGT)))
- RENDER_LDFLAGS = -Llib/win32/ -lcairo-2 -lfontconfig-1 -lfreetype-6 -liconv-2 -llzma-5 -lpixman-1-0 -lpng15-15 -lxml2-2 -lzlib1
-else ifneq (, $(findstring i686-w64-mingw32, $(SYSTGT)))
- RENDER_LDFLAGS = -Llib/win32/ -lcairo-2 -lfontconfig-1 -lfreetype-6 -liconv-2 -llzma-5 -lpixman-1-0 -lpng15-15 -lxml2-2 -lzlib1
-else
- RENDER_LDFLAGS = `pkg-config --libs cairo` `pkg-config --libs freetype2`
-endif
+RENDER_LDFLAGS = `pkg-config --libs cairo` `pkg-config --libs freetype2`
 
 RENDER_CFLAGS = `pkg-config --cflags cairo` `pkg-config --cflags freetype2`
 LDFLAGS += -pthread -lm

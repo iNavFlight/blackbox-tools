@@ -8,6 +8,8 @@ These tools allow you to convert flight data logs recorded by INAV's Blackbox fe
 
 You can download the latest executable versions of these tools for x86_64 on Linux, MacOS or Windows (x86_64 and ia-32) from the "releases" tab above. If you're running Linux on ARM or RISCV or FreeBSD or MacOS aarch64, you can build the tools from source (instructions are further down this page).
 
+Please note that these tools prefer not to provide "derived values" in the output CSV files. If this is desired, it can easily be done, perhaps as part of a pipeline, outside of blacbox_decode.
+
 ## Using the blackbox_decode tool
 
 This is a *command line* tool. It should be run from a "shell" (e.g. "bash", "zsh", "cmd", "powershell" etc.)
@@ -222,9 +224,9 @@ MacOS `blacbox_decode` can also be cross-compiled on Linux using the supplied `M
 
 #### Windows (Win32)
 
-The tools can be cross-compiled on Linux (Win32 `blackbox_decode.exe` and `blackbox_render.exe`, Win64 `blackbox_decode.exe` using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64), using the `Makefile`. You will need to install the required tools and libraries (`pacman -S  make gcc cairo`).
+The tools can be cross-compiled on Linux (`blackbox_decode.exe` using the supplied `Makefile`, or built natively in MSys2 (Win32 and Win64), using the `Makefile`. You will need to install the required tools and libraries (`pacman -S  make gcc cairo`).
 
-Historically, the tools could be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable. This is no longer supported and may or (more likely), may not work.
+Historically, the tools could be built with Visual Studio Express 2013; open up the solution in the `visual-studio/` folder. You'll need to include the .DLL files from `lib/win32` in the same directory as your built executable. This is no longer supported and is unlikely to work.
 
 #### Install from build
 
@@ -246,26 +248,5 @@ $HOME/.local/bin/blackbox_render
 ## License
 
 This project is licensed under GPLv3.
-
-The binary version of `blackbox_render` for MacOSX is statically linked to these libraries:
-
- - libbz2 http://www.bzip.org/ (BSD-like)
- - zlib http://www.zlib.net/ (Zlib)
- - libcairo & libpixman http://cairographics.org/ (LGPL)
- - libfreetype http://www.freetype.org/ (BSD-like/GPLv2)
- - libpng16 http://www.libpng.org/pub/png/libpng.html (PNG)
-
-The windows binary (win32) of `blackbox_render` additionally ships with these DLLs:
-
- - libiconv https://www.gnu.org/software/libiconv/ (LGPL)
- - libfontconfig http://www.freedesktop.org/wiki/Software/fontconfig/
- - libxml2 http://xmlsoft.org/ (MIT)
- - liblzma http://tukaani.org/xz/ (Public Domain)
-
-The source distribution includes the source for these libraries as well object libraries for MacOS and Windows. Linux and FreeBSD will use the currently installed OS versions.
-
-This font is included with source distributions:
-
- - Source Sans Pro - Regular https://github.com/adobe-fonts/source-sans-pro (SIL Open Font license)
 
 Both binary and source builds include IMU code from Baseflight https://github.com/multiwii/baseflight (GPLv3)
