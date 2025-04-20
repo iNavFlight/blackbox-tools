@@ -213,9 +213,7 @@ gmake
 
 #### MacOSX
 
-Note: These instructions need validating.
-
-The easiest way to build is to install the [Xcode development tool][], then install an environment like [Homebrew][] or [MacPorts][] onto your system.
+The easiest way to build is to install the `Xcode development tool` (`xcode-select --install`), then install an environment like [Homebrew](https://brew.sh/) or [MacPorts](https://www.macports.org/) (untested) onto your system.
 
 From MacPorts / Homebrew you need to install `cairo`.
 
