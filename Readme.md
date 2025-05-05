@@ -32,7 +32,7 @@ blackbox_decode --datetime --merge-gps LOG00042.TXT
 Use the `--help` option to show more details and all the options, for example:
 
 ```text
-INAV Blackbox flight log decoder by Nicholas Sherlock (v7.0.1 123714c, Jan 19 2024 21:36:10)
+INAV Blackbox flight log decoder by Nicholas Sherlock (v8.0.0.RC1, Nov 25 2024 22:30:48)
 
 Usage:
      blackbox_decode [options] <input logs>
@@ -44,6 +44,8 @@ Options:
    --limits                 Print the limits and range of each field
    --stdout                 Write log to stdout instead of to a file
    --datetime               Add a dateTime column with UTC date time
+   --throttle               Add a Throttle column in percent ()
+   --distance               Add a Distance column, distance to home (meters)
    --unit-amperage <unit>   Current meter unit (raw|mA|A), default is A (amps)
    --unit-flags <unit>      State flags unit (raw|flags), default is flags
    --unit-frame-time <unit> Frame timestamp unit (us|s), default is us (microseconds)

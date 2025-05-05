@@ -45,6 +45,8 @@ typedef struct decodeOptions_t {
     int simulateCurrentMeter;
     int mergeGPS;
     int datetime;
+    int throttle;
+    int distance;
     const char *outputPrefix;
 
     bool overrideSimCurrentMeterOffset, overrideSimCurrentMeterScale;
@@ -61,6 +63,7 @@ decodeOptions_t options = {
     .simulateCurrentMeter = false,
     .mergeGPS = 0,
     .datetime = 0,
+    .throttle = 0,
 
     .overrideSimCurrentMeterOffset = false,
     .overrideSimCurrentMeterScale = false,
@@ -266,6 +269,7 @@ static bool fprintfMainFieldInUnit(flightLog_t *log, FILE *file, int fieldIndex,
                 return true;
             }
         break;
+        case UNIT_PERCENT:
         case UNIT_RAW:
             if (log->frameDefs['I'].fieldSigned[fieldIndex] || options.raw) {
                 fprintf(file, "%d", (int32_t) fieldValue);
@@ -525,8 +529,71 @@ void outputGPSFields(flightLog_t *log, FILE *file, int64_t *frame)
 
 }
 
+void computeThrottle(flightLog_t* log, int64_t* frame, uint8_t frameType)
+{
+  if (frame && frameType == 'I' && options.throttle > 1)
+  {
+    int64_t rcThrottle = frame[log->mainFieldIndexes.rcCommand[3]];
+    if (rcThrottle <= log->sysConfig.minthrottle)
+    {
+      frame[options.throttle] = 0;
+    }
+    else if (rcThrottle >= log->sysConfig.maxthrottle)
+    {
+      frame[options.throttle] = 100;
+    }
+    else
+    {
+      int64_t a = log->sysConfig.maxthrottle - log->sysConfig.minthrottle;
+      int64_t b = rcThrottle - log->sysConfig.minthrottle;
+      frame[options.throttle] = b * 100 / a;
+    }
+  }
+}
+
+void computeDistance(flightLog_t* log, int64_t* frame, uint8_t frameType)
+{
+  if (frame && frameType == 'G' && options.distance > 1)
+  {
+    static const double GPS_DEGREES_DIVIDER = 10000000.0;
+    static double home_latitude;
+    static double  home_longitude;
+    static double home_altitude;
+    static bool has_home = false;
+
+    double latitude = (double)frame[log->gpsFieldIndexes.GPS_coord[0]] / GPS_DEGREES_DIVIDER;
+    double longitude = (double)frame[log->gpsFieldIndexes.GPS_coord[1]] / GPS_DEGREES_DIVIDER;
+    double altitude = (double)frame[log->gpsFieldIndexes.GPS_altitude];
+
+    if (!has_home && frame[log->gpsFieldIndexes.GPS_numSat] >= MIN_GPS_SATELLITES) {
+      home_latitude = latitude;
+      home_longitude = longitude;
+      home_altitude = altitude;
+      has_home = true;
+    }
+
+    frame[options.distance] = 0;
+
+    if (has_home) {
+      // formule haversine
+      const double DEG2RAD = 3.14159265358979323846 / 180.0;
+      double dlong = fabs(longitude - home_longitude) * DEG2RAD;
+      double dlat = fabs(latitude - home_latitude) * DEG2RAD;
+      double a = pow(sin(dlat / 2.0), 2) + cos(home_latitude * DEG2RAD) * cos(latitude * DEG2RAD) * pow(sin(dlong / 2.0), 2);
+      double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+      double d = 6371000.0 * c;
+
+      // altitude
+      double delta_alt = fabs(altitude - home_altitude);
+      double dist = sqrt(pow(d, 2) + pow(delta_alt, 2));
+      frame[options.distance] = (int64_t)round(dist);
+    }
+  }
+}
+
 void outputGPSFrame(flightLog_t *log, int64_t *frame)
 {
+  
     int64_t gpsFrameTime;
 
     // If we're not logging every loop iteration, we include a timestamp field in the GPS frame:
@@ -767,12 +834,19 @@ void onFrameReadyMerge(flightLog_t *log, bool frameValid, int64_t *frame, uint8_
                     bufferedFrameTime = -1;
                 }
             }
-        break;
+            if (frameValid) {
+                computeThrottle(log, frame, frameType);
+            }
+            break;
     }
 }
 
 void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t frameType, int fieldCount, int frameOffset, int frameSize)
 {
+    if (frameValid) {
+        computeDistance(log, frame, frameType);
+    }
+
     if (options.mergeGPS && log->frameDefs['G'].fieldCount > 0) {
         //Use the alternate frame processing routine which merges main stream data and GPS data together
         onFrameReadyMerge(log, frameValid, frame, frameType, fieldCount, frameOffset, frameSize);
@@ -782,7 +856,7 @@ void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t fra
     switch (frameType) {
         case 'G':
             if (frameValid) {
-                outputGPSFrame(log, frame);
+              outputGPSFrame(log, frame);
             }
         break;
         case 'S':
@@ -827,6 +901,9 @@ void onFrameReady(flightLog_t *log, bool frameValid, int64_t *frame, uint8_t fra
                     fprintf(csvFile, "Failed to decode %c frame, offset %d, size %d\n", (char) frameType, frameOffset, frameSize);
                 }
             }
+            if (frameValid) {
+                computeThrottle(log, frame, frameType);
+            }
         break;
     }
 }
@@ -858,6 +935,8 @@ void identifyGPSFields(flightLog_t *log)
             gpsFieldTypes[i] = GPS_FIELD_TYPE_METERS_PER_SECOND_TIMES_100;
         } else if (strcmp(fieldName, "GPS_ground_course") == 0) {
             gpsFieldTypes[i] = GPS_FIELD_TYPE_DEGREES_TIMES_10;
+        } else if (strcmp(fieldName, "Distance") == 0) {
+            gpsFieldTypes[i] = GPS_FIELD_TYPE_METERS;
         } else {
             gpsFieldTypes[i] = GPS_FIELD_TYPE_INTEGER;
         }
@@ -900,6 +979,9 @@ void applyFieldUnits(flightLog_t *log)
         if (log->gpsFieldIndexes.GPS_speed > -1) {
             gpsGFieldUnit[log->gpsFieldIndexes.GPS_speed] = options.unitGPSSpeed;
         }
+        if (options.distance > 1) {
+          gpsGFieldUnit[options.distance] = UNIT_METERS;
+        }
 
         for (int i = 0; i < 3; i++) {
             if (log->mainFieldIndexes.accSmooth[i] > -1) {
@@ -909,6 +991,10 @@ void applyFieldUnits(flightLog_t *log)
             if (log->mainFieldIndexes.gyroADC[i] > -1) {
                 mainFieldUnit[log->mainFieldIndexes.gyroADC[i]] = options.unitRotation;
             }
+        }
+
+        if (options.throttle > 1) {
+            mainFieldUnit[options.throttle] = UNIT_PERCENT;
         }
 
         // Slow frame fields:
@@ -975,9 +1061,29 @@ void onMetadataReady(flightLog_t *log)
     if (log->frameDefs['I'].fieldCount == 0) {
         fprintf(stderr, "No fields found in log, is it missing its header?\n");
         return;
-    } else if (options.simulateIMU && (log->mainFieldIndexes.accSmooth[0] == -1 || log->mainFieldIndexes.gyroADC[0] == -1)){
+    } 
+    if (options.simulateIMU && (log->mainFieldIndexes.accSmooth[0] == -1 || log->mainFieldIndexes.gyroADC[0] == -1)){
         fprintf(stderr, "Can't simulate the IMU because accelerometer or gyroscope data is missing\n");
         options.simulateIMU = false;
+    }
+    bool hasThrottle = log->mainFieldIndexes.rcCommand[3] != -1;
+    if (options.throttle && hasThrottle)
+    {
+      int fieldIndex = log->frameDefs['I'].fieldCount;
+      log->frameDefs['I'].fieldName[fieldIndex] = "Throttle";
+      log->frameDefs['I'].predictor[fieldIndex] = FLIGHT_LOG_FIELD_PREDICTOR_0;
+      log->frameDefs['I'].encoding[fieldIndex] = FLIGHT_LOG_FIELD_ENCODING_NULL;
+      options.throttle = fieldIndex;
+      log->frameDefs['I'].fieldCount++;
+    }
+    if (options.distance)
+    {
+      int fieldIndex = log->frameDefs['G'].fieldCount;
+      log->frameDefs['G'].fieldName[fieldIndex] = "Distance";
+      log->frameDefs['G'].predictor[fieldIndex] = FLIGHT_LOG_FIELD_PREDICTOR_0;
+      log->frameDefs['G'].encoding[fieldIndex] = FLIGHT_LOG_FIELD_ENCODING_NULL;
+      options.distance = fieldIndex;
+      log->frameDefs['G'].fieldCount++;
     }
 
     identifyGPSFields(log);
@@ -1289,6 +1395,8 @@ void printUsage(const char *argv0)
         "   --limits                 Print the limits and range of each field\n"
         "   --stdout                 Write log to stdout instead of to a file\n"
         "   --datetime               Add a dateTime column with UTC date time\n"
+        "   --throttle               Add a Throttle column in percent (%)\n"
+        "   --distance               Add a Distance column, distance to home (meters)\n"
         "   --unit-amperage <unit>   Current meter unit (raw|mA|A), default is A (amps)\n"
         "   --unit-flags <unit>      State flags unit (raw|flags), default is flags\n"
         "   --unit-frame-time <unit> Frame timestamp unit (us|s), default is us (microseconds)\n"
@@ -1353,8 +1461,10 @@ void parseCommandlineOptions(int argc, char **argv)
             {"debug", no_argument, &options.debug, 1},
             {"limits", no_argument, &options.limits, 1},
             {"stdout", no_argument, &options.toStdout, 1},
-            { "merge-gps", no_argument, &options.mergeGPS, 1 },
-            { "datetime", no_argument, &options.datetime, 1 },
+            {"merge-gps", no_argument, &options.mergeGPS, 1 },
+            {"datetime", no_argument, &options.datetime, 1 },
+            {"throttle", no_argument, &options.throttle, 1 },
+            {"distance", no_argument, &options.distance, 1 },
             {"simulate-imu", no_argument, &options.simulateIMU, 1},
             {"simulate-current-meter", no_argument, &options.simulateCurrentMeter, 1},
             {"imu-ignore-mag", no_argument, &options.imuIgnoreMag, 1},
