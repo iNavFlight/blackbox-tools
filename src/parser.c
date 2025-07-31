@@ -63,7 +63,7 @@ typedef struct flightLogPrivate_t
     int64_t* mainHistory[3];
     bool mainStreamIsValid;
     // When 32-bit time values roll over to zero, we add 2^32 to this accumulator so it can be added to the time:
-    int64_t timeRolloverAccumulator;
+    int64_t timeRolloverAccumulator[2];
 
     int64_t gpsHomeHistory[2][2]; // 0 - space to decode new frames into, 1 - previous frame
     bool gpsHomeIsValid;
@@ -941,7 +941,7 @@ static void parseEventFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
 
     switch (eventType) {
         case FLIGHT_LOG_EVENT_SYNC_BEEP:
-            data->syncBeep.time = streamReadUnsignedVB(stream) + log->private->timeRolloverAccumulator;
+            data->syncBeep.time = streamReadUnsignedVB(stream) + log->private->timeRolloverAccumulator[0];
         break;
         case FLIGHT_LOG_EVENT_AUTOTUNE_CYCLE_START:
             data->autotuneCycleStart.phase = streamReadByte(stream);
@@ -978,7 +978,7 @@ static void parseEventFrame(flightLog_t *log, mmapStream_t *stream, bool raw)
         break;
         case FLIGHT_LOG_EVENT_LOGGING_RESUME:
             data->loggingResume.logIteration = streamReadUnsignedVB(stream);
-            data->loggingResume.currentTime = streamReadUnsignedVB(stream) + log->private->timeRolloverAccumulator;
+            data->loggingResume.currentTime = streamReadUnsignedVB(stream) + log->private->timeRolloverAccumulator[0];
         break;
         case FLIGHT_LOG_EVENT_LOG_END:
             streamRead(stream, endMessage, END_OF_LOG_MESSAGE_LEN);
@@ -1260,7 +1260,7 @@ static void flightLogInvalidateStream(flightLog_t *log)
  *
  * Returns the recovered 64-bit timestamp for the frame.
  */
-static int64_t flightLogDetectAndApplyTimestampRollover(flightLog_t *log, int64_t timestamp)
+static int64_t flightLogDetectAndApplyTimestampRollover(flightLog_t *log, int64_t timestamp, int id)
 {
     if (log->private->lastMainFrameTime != -1) {
         if (
@@ -1270,16 +1270,16 @@ static int64_t flightLogDetectAndApplyTimestampRollover(flightLog_t *log, int64_
             && (uint32_t) ((uint32_t) timestamp - (uint32_t) log->private->lastMainFrameTime) < MAXIMUM_TIME_JUMP_BETWEEN_FRAMES
         ) {
             // 32-bit time counter has wrapped, so add 2^32 to the timestamp
-            log->private->timeRolloverAccumulator += 0x100000000LL;
+            log->private->timeRolloverAccumulator[id] += 0x100000000LL;
         }
     }
 
-    return (uint32_t) timestamp + log->private->timeRolloverAccumulator;
+    return (uint32_t) timestamp + log->private->timeRolloverAccumulator[id];
 }
 
 static void flightLogApplyMainFrameTimeRollover(flightLog_t *log)
 {
-    log->private->mainHistory[0][FLIGHT_LOG_FIELD_INDEX_TIME] = flightLogDetectAndApplyTimestampRollover(log, log->private->mainHistory[0][FLIGHT_LOG_FIELD_INDEX_TIME]);
+    log->private->mainHistory[0][FLIGHT_LOG_FIELD_INDEX_TIME] = flightLogDetectAndApplyTimestampRollover(log, log->private->mainHistory[0][FLIGHT_LOG_FIELD_INDEX_TIME], 0);
 }
 
 static void flightLogApplyGPSFrameTimeRollover(flightLog_t *log)
@@ -1287,7 +1287,7 @@ static void flightLogApplyGPSFrameTimeRollover(flightLog_t *log)
 	int timeFieldIndex = log->gpsFieldIndexes.time;
 
 	if (timeFieldIndex != -1) {
-		log->private->lastGPS[timeFieldIndex] = flightLogDetectAndApplyTimestampRollover(log, log->private->lastGPS[timeFieldIndex]);
+	    log->private->lastGPS[timeFieldIndex] = flightLogDetectAndApplyTimestampRollover(log, log->private->lastGPS[timeFieldIndex], 1);
 	}
 }
 
@@ -1538,7 +1538,8 @@ bool flightLogParse(flightLog_t *log, int logIndex, FlightLogMetadataReady onMet
 
     clearFieldIdents(log);
 
-    private->timeRolloverAccumulator = 0;
+    private->timeRolloverAccumulator[0] = 0;
+    private->timeRolloverAccumulator[1] = 0;
     private->lastSkippedFrames = 0;
     private->lastMainFrameIteration = (uint32_t) -1;
     private->lastMainFrameTime = -1;
