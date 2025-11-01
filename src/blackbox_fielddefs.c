@@ -310,5 +310,6 @@ const char * const INFLIGHT_ADJUSTMENT_FUNCTIONS[] = {
     "FW_TPA_TIME_CONSTANT",             // 57
     "FW_LEVEL_TRIM",            // 58
     "NAV_WP_MULTI_MISSION_INDEX",               // 59
-/* 60 elements */
+    "NAV_FW_ALT_CONTROL_RESPONSE",    // 60
+/* 61 elements */
 };
