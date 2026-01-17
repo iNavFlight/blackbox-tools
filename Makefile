@@ -61,9 +61,9 @@ LTO_FLAGS	 = $(OPTIMIZE)
 DEBUG_FLAGS	 = -g3 -ggdb
 else
 OPTIMIZE	 = -O3
-LTO_FLAGS	 = -flto $(OPTIMIZE) -fno-fat-lto-objects
+LTO_FLAGS	 = -flto $(OPTIMIZE)
 DEBUG_FLAGS =
-#LDFLAGS += -flto # required for clang LTO linking
+LDFLAGS += -flto # required for clang LTO linking
 endif
 
 BLACKBOX_COMMIT := unknown
