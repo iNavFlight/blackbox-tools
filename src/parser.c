@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 //For msvcrt to define M_PI:
 #define _USE_MATH_DEFINES
@@ -80,6 +81,15 @@ typedef struct flightLogPrivate_t
     uint32_t lastMainFrameIteration;
     int64_t lastMainFrameTime;
 
+    // INAV logs from before inav#12126 leave out the ninth value of a 9-field TAG8_8SVB run when it is zero
+    bool inavNinthFieldMayBeAbsent;
+    // The P frame being parsed is read with that ninth value absent
+    bool inavNinthFieldAbsent;
+    // Frames where only one reading ended on a marker, by reading: the tie breaker of last resort
+    uint32_t inavNinthFieldPresentCount, inavNinthFieldAbsentCount;
+    // Neither reading could be told apart: the frame is dropped rather than decoded shifted
+    bool inavNinthFieldUnsure;
+
     // Event handlers:
     FlightLogMetadataReady onMetadataReady;
     FlightLogFrameReady onFrameReady;
@@ -119,6 +129,8 @@ static const flightLogFrameType_t frameTypes[] = {
     {.marker = 'E', .parse = parseEventFrame,   .complete = completeEventFrame},
     {.marker = 'S', .parse = parseSlowFrame,    .complete = completeSlowFrame}
 };
+
+static const flightLogFrameType_t* getFrameType(uint8_t c);
 
 /**
  * Parse a comma-separated list of field names into the given frame definition. Sets the fieldCount field based on the
@@ -700,6 +712,26 @@ static int64_t applyPrediction(flightLog_t *log, int fieldIndex, int predictor, 
 }
 
 /**
+ * Is there a run of exactly `length` consecutive TAG8_8SVB fields in the given frame definition?
+ */
+static bool hasTag8_8SVBRun(const flightLogFrameDef_t *frameDef, int length)
+{
+    int run = 0;
+
+    for (int i = 0; i < frameDef->fieldCount; i++) {
+        if (frameDef->encoding[i] == FLIGHT_LOG_FIELD_ENCODING_TAG8_8SVB) {
+            run++;
+        } else {
+            if (run == length)
+                return true;
+            run = 0;
+        }
+    }
+
+    return run == length;
+}
+
+/**
  * Attempt to parse the frame of the given `frameType` into the supplied `frame` buffer using the encoding/predictor
  * definitions from log->frameDefs[`frameType`].
  *
@@ -781,7 +813,11 @@ static void parseFrame(flightLog_t *log, mmapStream_t *stream, uint8_t frameType
 
                     groupCount = j - i;
 
-                    streamReadTag8_8SVB(stream, values, groupCount);
+                    if (frameType == 'P' && log->private->inavNinthFieldAbsent && groupCount == 1 && i > 0
+                            && encoding[i - 1] == FLIGHT_LOG_FIELD_ENCODING_TAG8_8SVB)
+                        values[0] = 0;
+                    else
+                        streamReadTag8_8SVB(stream, values, groupCount);
 
                     for (j = 0; j < groupCount; j++, i++)
                         frame[i] = applyPrediction(log, i, raw ? FLIGHT_LOG_FIELD_PREDICTOR_0 : predictor[i], values[j], frame, previous, previous2);
@@ -892,6 +928,137 @@ static void parseIntraframe(flightLog_t *log, mmapStream_t *stream, bool raw)
 }
 
 /**
+ * Parse the frame that starts at `frameStart` (its marker byte) without predictions, and report whether it ends where
+ * another frame or the log ends, setting *frameEnd. The stream is left where it was.
+ */
+static bool frameEndsOnMarker(flightLog_t *log, mmapStream_t *stream, const char *frameStart, const char **frameEnd)
+{
+    const char *pos = stream->pos;
+    int bitPos = stream->bitPos;
+    bool eof = stream->eof;
+    // Room for a group that runs past the last field of a malformed header
+    int64_t scratch[FLIGHT_LOG_MAX_FIELDS + 8];
+    const flightLogFrameType_t *frameType = getFrameType((uint8_t) *frameStart);
+    bool result;
+
+    if (!frameType)
+        return false;
+    // Parsing an event frame would replace the last event: check only that an event type INAV writes follows
+    if (frameType->marker == 'E') {
+        *frameEnd = frameStart;
+        if (frameStart + 1 >= stream->end)
+            return false;
+        switch ((uint8_t) frameStart[1]) {
+            case 0: case 10: case 11: case 12: case 13: case 14: case 20: case 30: case 40: case 255:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    stream->pos = frameStart + 1;
+    stream->bitPos = CHAR_BIT - 1;
+    stream->eof = false;
+
+    parseFrame(log, stream, frameType->marker, scratch, NULL, NULL, 0, true);
+
+    *frameEnd = stream->pos;
+    result = !stream->eof && stream->pos - frameStart <= FLIGHT_LOG_MAX_FRAME_LENGTH
+        && (stream->pos >= stream->end || getFrameType((uint8_t) *stream->pos));
+
+    stream->pos = pos;
+    stream->bitPos = bitPos;
+    stream->eof = eof;
+
+    return result;
+}
+
+/**
+ * How many frames in a row, from `frameStart`, end where another frame or the log begins, up to `max`. A P frame
+ * passes with either reading of the ninth value; an event frame ends the walk, as it is not measured.
+ */
+static int framesEndingOnMarkers(flightLog_t *log, mmapStream_t *stream, const char *frameStart, int max)
+{
+    flightLogPrivate_t *private = log->private;
+    const char *frameEnd;
+    int count = 0;
+
+    while (count < max) {
+        if (frameStart >= stream->end)
+            return max;
+
+        private->inavNinthFieldAbsent = false;
+        bool ends = frameEndsOnMarker(log, stream, frameStart, &frameEnd);
+
+        if (!ends && *frameStart == 'P') {
+            private->inavNinthFieldAbsent = true;
+            ends = frameEndsOnMarker(log, stream, frameStart, &frameEnd);
+        }
+
+        if (!ends)
+            break;
+
+        count++;
+
+        if (*frameStart == 'E')
+            break;
+
+        frameStart = frameEnd;
+    }
+
+    return count;
+}
+
+/**
+ * Decide how to read the P frame whose body starts at the stream position: with the ninth value of the run present
+ * (a signed VB) or absent. Keep the reading that ends on the next frame's marker. When both do, the wrong one ends a
+ * value early or late, on a byte that only looks like a marker: keep the one after which more frames in a row end on
+ * markers, and if that is level too, the reading this log has needed more often.
+ */
+static bool inavNinthFieldLooksAbsent(flightLog_t *log, mmapStream_t *stream)
+{
+    flightLogPrivate_t *private = log->private;
+    const char *frameStart = stream->pos - 1;
+    const char *endPresent, *endAbsent;
+    bool present, absent;
+
+    private->inavNinthFieldUnsure = false;
+    private->inavNinthFieldAbsent = false;
+    present = frameEndsOnMarker(log, stream, frameStart, &endPresent);
+    private->inavNinthFieldAbsent = true;
+    absent = frameEndsOnMarker(log, stream, frameStart, &endAbsent);
+
+    if (present && absent && endPresent != endAbsent) {
+        const int chainPresent = framesEndingOnMarkers(log, stream, endPresent, 8);
+        const int chainAbsent = framesEndingOnMarkers(log, stream, endAbsent, 8);
+
+        if (chainPresent != chainAbsent)
+            return chainAbsent > chainPresent;
+
+        // Both readings frame the bytes after them alike: follow the one this log has clearly needed so far
+        const uint32_t presentCount = private->inavNinthFieldPresentCount;
+        const uint32_t absentCount = private->inavNinthFieldAbsentCount;
+
+        if (absentCount >= 4 * presentCount + 4)
+            return true;
+        if (presentCount >= 4 * absentCount + 4)
+            return false;
+
+        private->inavNinthFieldUnsure = true;
+        return true;
+    }
+
+    if (present != absent) {
+        if (absent)
+            private->inavNinthFieldAbsentCount++;
+        else
+            private->inavNinthFieldPresentCount++;
+    }
+
+    return absent || !present;
+}
+
+/**
  * Attempt to parse the interframe at the current log position into the history buffer at mainHistory[0].
  */
 static void parseInterframe(flightLog_t *log, mmapStream_t *stream, bool raw)
@@ -903,6 +1070,9 @@ static void parseInterframe(flightLog_t *log, mmapStream_t *stream, bool raw)
     int64_t *previous2 = log->private->mainHistory[2];
 
     private->lastSkippedFrames = countIntentionallySkippedFrames(log);
+
+    if (private->inavNinthFieldMayBeAbsent)
+        private->inavNinthFieldAbsent = inavNinthFieldLooksAbsent(log, stream);
 
     parseFrame(log, stream, 'P', current, previous, previous2, log->private->lastSkippedFrames, raw);
 }
@@ -1343,6 +1513,11 @@ static bool completeInterframe(flightLog_t *log, mmapStream_t *stream, uint8_t f
 
     flightLogApplyMainFrameTimeRollover(log);
 
+    if (private->inavNinthFieldUnsure) {
+        private->inavNinthFieldUnsure = false;
+        flightLogInvalidateStream(log);
+    }
+
     if (private->mainStreamIsValid && !raw && !flightLogValidateMainFrameValues(log)) {
         flightLogInvalidateStream(log);
     }
@@ -1590,6 +1765,13 @@ bool flightLogParse(flightLog_t *log, int logIndex, FlightLogMetadataReady onMet
                                     log->frameDefs['G'].predictor[i] = FLIGHT_LOG_FIELD_PREDICTOR_HOME_COORD_1;
                                 }
                             }
+
+                            private->inavNinthFieldMayBeAbsent = log->sysConfig.firmwareRevison == FIRMWARE_REVISON_INAV
+                                && hasTag8_8SVBRun(&log->frameDefs['P'], 9);
+                            private->inavNinthFieldAbsent = false;
+                            private->inavNinthFieldPresentCount = 0;
+                            private->inavNinthFieldAbsentCount = 0;
+                            private->inavNinthFieldUnsure = false;
 
                             parserState = PARSER_STATE_DATA;
                             lastFrameType = NULL;
