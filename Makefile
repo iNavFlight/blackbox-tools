@@ -38,6 +38,7 @@ COMMON_SRC	 = parser.c tools.c platform.c stream.c decoders.c units.c blackbox_f
 DECODER_SRC	 = $(COMMON_SRC) blackbox_decode.c gpxwriter.c imu.c battery.c stats.c
 RENDERER_SRC = $(COMMON_SRC) blackbox_render.c datapoints.c embeddedfont.c expo.c imu.c
 ENCODER_TESTBED_SRC = $(COMMON_SRC) encoder_testbed.c encoder_testbed_io.c
+REDACT_SRC   = $(COMMON_SRC) blackbox_redact.c
 
 # In some cases, %.s regarded as intermediate file, which is actually not.
 # This will prevent accidental deletion of startup code.
@@ -107,14 +108,16 @@ LDFLAGS += -pthread -lm
 DECODER_ELF	 = $(BIN_DIR)/blackbox_decode
 RENDERER_ELF = $(BIN_DIR)/blackbox_render
 ENCODER_TESTBED_ELF = $(BIN_DIR)/encoder_testbed
+REDACT_ELF   = $(BIN_DIR)/blackbox_redact
 
 DECODER_OBJS	 = $(addsuffix .o,$(addprefix $(OBJECT_DIR)/,$(basename $(DECODER_SRC))))
 RENDERER_OBJS	 = $(addsuffix .o,$(addprefix $(OBJECT_DIR)/,$(basename $(RENDERER_SRC))))
 ENCODER_TESTBED_OBJS	 = $(addsuffix .o,$(addprefix $(OBJECT_DIR)/,$(basename $(ENCODER_TESTBED_SRC))))
+REDACT_OBJS  = $(addsuffix .o,$(addprefix $(OBJECT_DIR)/,$(basename $(REDACT_SRC))))
 
 TARGET_MAP   = $(OBJECT_DIR)/blackbox_decode.map
 
-all : $(DECODER_ELF) $(RENDERER_ELF) $(ENCODER_TESTBED_ELF)
+all : $(DECODER_ELF) $(RENDERER_ELF) $(ENCODER_TESTBED_ELF) $(REDACT_ELF)
 
 ifneq ($(BLACKBOX_VERSION),)
  $(info **INFO** Setting VERSION to $(BLACKBOX_VERSION))
@@ -132,6 +135,9 @@ $(RENDERER_ELF):  $(RENDERER_OBJS)
 $(ENCODER_TESTBED_ELF): $(ENCODER_TESTBED_OBJS)
 	@$(CC) $(ARCH_FLAGS) -o $@ $^ $(LDFLAGS)
 
+$(REDACT_ELF): $(REDACT_OBJS)
+	@$(CC) $(ARCH_FLAGS) -o $@ $^ $(LDFLAGS)
+
 # Compile
 $(OBJECT_DIR)/%.o: %.c version.h
 	@mkdir -p $(dir $@)
@@ -144,7 +150,7 @@ obj/blackbox_render.o :  blackbox_render.c
 	@$(CC) -c -o $@ $(CFLAGS) $(RENDER_CFLAGS) $<
 
 clean:
-	rm -f $(RENDERER_ELF) $(DECODER_ELF) $(ENCODER_TESTBED_ELF) $(ENCODER_TESTBED_OBJS) $(RENDERER_OBJS) $(DECODER_OBJS) $(TARGET_MAP)
+	rm -f $(RENDERER_ELF) $(DECODER_ELF) $(ENCODER_TESTBED_ELF) $(REDACT_ELF) $(ENCODER_TESTBED_OBJS) $(RENDERER_OBJS) $(DECODER_OBJS) $(REDACT_OBJS) $(TARGET_MAP)
 
 help:
 	@echo ""
@@ -154,11 +160,11 @@ help:
 	@echo "        make [OPTIONS=\"<options>\"]"
 	@echo ""
 
-install: $(DECODER_ELF) $(RENDERER_ELF)
+install: $(DECODER_ELF) $(RENDERER_ELF) $(REDACT_ELF)
 	install -d $(prefix)/bin
-	install -s -m 755  $(DECODER_ELF) $(RENDERER_ELF) $(prefix)/bin/
+	install -s -m 755  $(DECODER_ELF) $(RENDERER_ELF) $(REDACT_ELF) $(prefix)/bin/
 	install -d $(prefix)/share/bash-completion/completions/
 	install -m 644 tools/blackbox_decode_complete.sh $(prefix)/share/bash-completion/completions/blackbox_decode
 
 uninstall:
-	rm -f $(prefix)/bin/blackbox_decode  $(prefix)/bin/blackbox_render
+	rm -f $(prefix)/bin/blackbox_decode  $(prefix)/bin/blackbox_render  $(prefix)/bin/blackbox_redact
